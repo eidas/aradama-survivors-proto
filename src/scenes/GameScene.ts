@@ -19,6 +19,7 @@ import {
 import { ENEMIES } from '../data/enemies';
 import { CentipedeController } from '../entities/Centipede';
 import { recordRun } from '../core/save';
+import { audio } from '../core/audio';
 import { InputSystem } from '../systems/InputSystem';
 import { SpawnSystem } from '../systems/SpawnSystem';
 import { EnemySystem } from '../systems/EnemySystem';
@@ -26,7 +27,7 @@ import { PlayerSystem } from '../systems/PlayerSystem';
 import { PickupSystem } from '../systems/PickupSystem';
 import { AbilitySystem } from '../systems/AbilitySystem';
 import { Hud } from '../ui/Hud';
-import { GAME_WIDTH, GAME_HEIGHT } from '../config';
+import { GAME_WIDTH, GAME_HEIGHT, DEBUG } from '../config';
 
 /** ゲームプレイ本体。システムを固定順で更新する(docs/02 §3.2) */
 export class GameScene extends Phaser.Scene {
@@ -46,6 +47,10 @@ export class GameScene extends Phaser.Scene {
   player!: Player;
   centipede: CentipedeController | null = null;
   private bossSpawned = false;
+  /** デバッグ: 自動操縦(バランス計測ボット) */
+  autopilot = false;
+  /** デバッグ: 4 倍速シミュレーション */
+  fastForward = false;
   enemies!: ObjectPool<Enemy>;
   gems!: ObjectPool<Gem>;
   projectiles!: ObjectPool<Projectile>;
@@ -79,6 +84,8 @@ export class GameScene extends Phaser.Scene {
     this.ended = false;
     this.centipede = null;
     this.bossSpawned = false;
+    this.autopilot = false;
+    this.fastForward = false;
 
     this.bg = this.add
       .tileSprite(0, 0, GAME_WIDTH, GAME_HEIGHT, 'bg-tile')
@@ -104,8 +111,17 @@ export class GameScene extends Phaser.Scene {
 
     this.cameras.main.startFollow(this.player.sprite, false, 0.15, 0.15);
 
-    const onLevelUp = () => this.cameras.main.flash(150, 155, 92, 240, false);
-    const onPlayerHit = () => this.cameras.main.shake(100, 0.004);
+    // デバッグ: ヘッドレス計測ボットから状態を読むための公開(DEV のみ)
+    if (DEBUG) (window as unknown as { __game: GameScene }).__game = this;
+
+    const onLevelUp = () => {
+      this.cameras.main.flash(150, 155, 92, 240, false);
+      audio.levelUp();
+    };
+    const onPlayerHit = () => {
+      this.cameras.main.shake(100, 0.004);
+      audio.playerHit();
+    };
     this.events.on('level-up', onLevelUp);
     this.events.on('player-hit', onPlayerHit);
     this.events.once('shutdown', () => {
@@ -116,7 +132,8 @@ export class GameScene extends Phaser.Scene {
 
   update(_time: number, delta: number): void {
     if (this.ended) return;
-    const dt = Math.min(delta, 50) / 1000; // dt 上限クランプ(docs/04 §3)
+    let dt = Math.min(delta, 50) / 1000; // dt 上限クランプ(docs/04 §3)
+    if (this.fastForward) dt *= 4; // デバッグ: バランス計測用の倍速
     this.runTime += dt;
 
     this.inputSystem.update();
@@ -169,6 +186,7 @@ export class GameScene extends Phaser.Scene {
       1, // ボスは時間スケーリングなし(HP 2500 固定)
     );
     this.showBanner('大型荒魂 出現 — 討伐せよ');
+    audio.bossRoar();
   }
 
   /** 中央に 2.5 秒のバナー表示(ボス出現などの合図) */
@@ -256,6 +274,7 @@ export class GameScene extends Phaser.Scene {
       }
     }
     this.showDissolve(enemy);
+    audio.kill();
     const wasHead = enemy.def.id === 'centipedeHead';
     const wasBoss = enemy.def.id === 'amalgam';
     enemy.despawn();
@@ -307,6 +326,7 @@ export class GameScene extends Phaser.Scene {
     this.ended = true;
     const record = { victory, timeSec: this.runTime, kills: this.kills, level: this.level };
     const bestUpdated = recordRun(record);
+    audio.jingle(victory);
     // 最終ビルド一覧(取得した強化と回数)
     const build = UPGRADES.filter((u) => (this.takes[u.id] ?? 0) > 0).map(
       (u) => `${u.nameJa}${(this.takes[u.id] ?? 0) > 1 ? ` ×${this.takes[u.id]}` : ''}`,

@@ -22,6 +22,7 @@ import {
   MITORI_BONUS_STEP,
   MITORI_PER_KILLS,
 } from '../data/characters';
+import { audio } from '../core/audio';
 
 interface SlashVfx {
   sprite: Phaser.GameObjects.Image;
@@ -172,6 +173,7 @@ export class PlayerSystem {
       }
     }
     g.cameras.main.shake(80, 0.002 * stage);
+    audio.chargeRelease(stage);
   }
 
   /** 扇形範囲の敵に御刀ダメージを与える */
@@ -237,6 +239,7 @@ export class PlayerSystem {
   }
 
   private showSlash(x: number, y: number, angle: number, radius: number): void {
+    audio.slash();
     const s = this.slashes[this.slashCursor];
     this.slashCursor = (this.slashCursor + 1) % this.slashes.length;
     s.life = SLASH_LIFETIME;

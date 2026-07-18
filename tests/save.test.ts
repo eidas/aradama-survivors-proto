@@ -22,6 +22,6 @@ describe('isBetterRun(ベスト記録の更新判定)', () => {
 
 describe('loadSave', () => {
   it('localStorage がない環境(Node)でも初期値で動く', () => {
-    expect(loadSave()).toEqual({ best: null });
+    expect(loadSave()).toEqual({ best: null, settings: { muted: false } });
   });
 });

@@ -11,7 +11,12 @@ export interface BestRecord {
 
 export interface SaveData {
   best: BestRecord | null;
+  settings: {
+    muted: boolean;
+  };
 }
+
+const DEFAULTS: SaveData = { best: null, settings: { muted: false } };
 
 /** 新しいランがベスト記録を上回るか。勝利 > 生存時間 の優先順で比較する */
 export function isBetterRun(candidate: BestRecord, best: BestRecord | null): boolean {
@@ -23,11 +28,26 @@ export function isBetterRun(candidate: BestRecord, best: BestRecord | null): boo
 export function loadSave(): SaveData {
   try {
     const raw = globalThis.localStorage?.getItem(KEY);
-    if (raw) return JSON.parse(raw) as SaveData;
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<SaveData>;
+      // 旧スキーマとのマージ(欠けたフィールドはデフォルトで補完)
+      return {
+        best: parsed.best ?? null,
+        settings: { ...DEFAULTS.settings, ...parsed.settings },
+      };
+    }
   } catch {
     // 破損・パース不能は初期化扱い
   }
-  return { best: null };
+  return structuredClone(DEFAULTS);
+}
+
+/** 設定のみ更新して保存 */
+export function updateSettings(patch: Partial<SaveData['settings']>): SaveData['settings'] {
+  const data = loadSave();
+  data.settings = { ...data.settings, ...patch };
+  storeSave(data);
+  return data.settings;
 }
 
 export function storeSave(data: SaveData): void {

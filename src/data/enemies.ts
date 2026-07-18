@@ -27,18 +27,19 @@ export const ENEMIES: Record<string, EnemyDef> = {
     aiParams: {},
     textureKey: 'enemy-insect',
   },
+  // 接触ダメージ・急降下頻度はバランス調整パスで緩和(docs/05: 2:00〜4:30 に死因が集中)
   bird: {
     id: 'bird',
     hp: 14,
     speed: 150,
-    contactDamage: 8,
+    contactDamage: 7,
     radius: 9,
     gemDrop: [{ size: 'S', count: 2 }],
     ai: 'orbitDive',
     aiParams: {
       orbitRadius: 250,
-      diveIntervalMin: 3,
-      diveIntervalMax: 5,
+      diveIntervalMin: 3.5,
+      diveIntervalMax: 5.5,
       telegraph: 0.4,
       diveSpeedMul: 2.5,
       diveDuration: 0.9,
@@ -55,7 +56,7 @@ export const ENEMIES: Record<string, EnemyDef> = {
     ai: 'charge',
     aiParams: {
       detectRange: 280,
-      telegraph: 1.0,
+      telegraph: 1.1, // 調整パスで +0.1(突進の回避猶予。docs/05)
       chargeSpeed: 320,
       chargeDuration: 1.6,
       stun: 1.0,
