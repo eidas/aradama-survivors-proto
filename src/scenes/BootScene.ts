@@ -93,6 +93,12 @@ export class BootScene extends Phaser.Scene {
     this.makeGemTexture(g, 'gem-m', 7, 0xb04ce0);
     this.makeGemTexture(g, 'gem-l', 9, 0xd040c0);
 
+    // 衝撃波リング(金剛身の解除反撃など)
+    g.lineStyle(4, 0xffd700, 0.9);
+    g.strokeCircle(42, 42, 40);
+    g.generateTexture('ring', 84, 84);
+    g.clear();
+
     // 斬撃(扇形 140° を基準に生成し、キャラ差はスケールと回転で表現)
     const r = 70;
     g.fillStyle(0xffffff, 0.28);

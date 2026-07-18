@@ -171,14 +171,16 @@ export class EnemySystem {
         // Sweep: 範囲内なら被弾処理(通常の接触無敵と同じパイプラインを通す)
         if (
           !p.cheatInvincible &&
+          !p.dashing &&
           Math.hypot(p.x - e.x, p.y - e.y) <= prm.sweepRange + p.radius
         ) {
-          const result = applyPlayerDamage(p.health, e.contactDamage);
+          const result = applyPlayerDamage(p.health, e.contactDamage, p.guarding);
           if (result === 'dead') {
             g.endRun(false);
             return;
           }
           if (result === 'hit') g.events.emit('player-hit');
+          if (result === 'guarded') g.onGuarded();
         }
         e.aiState = 2;
         e.aiTimer = prm.recover;
@@ -189,23 +191,24 @@ export class EnemySystem {
     }
   }
 
-  /** プレイヤーとの接触判定。攻撃解決の後に呼ぶ */
+  /** プレイヤーとの接触判定。攻撃解決の後に呼ぶ。迅移中はすり抜け */
   contact(): void {
     const g = this.game;
     const p = g.player;
-    if (p.cheatInvincible) return;
+    if (p.cheatInvincible || p.dashing) return;
 
     const candidates = g.enemyHash.queryCircle(p.x, p.y, p.radius + 20, this.queryBuf);
     for (const e of candidates) {
       const dx = e.x - p.x;
       const dy = e.y - p.y;
       if (dx * dx + dy * dy <= (e.radius + p.radius) ** 2) {
-        const result = applyPlayerDamage(p.health, e.contactDamage);
+        const result = applyPlayerDamage(p.health, e.contactDamage, p.guarding);
         if (result === 'dead') {
           g.endRun(false);
           return;
         }
         if (result === 'hit') g.events.emit('player-hit');
+        if (result === 'guarded') g.onGuarded();
       }
     }
   }

@@ -8,7 +8,7 @@ import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
 import { Gem } from '../entities/Gem';
 import { Projectile } from '../entities/Projectile';
-import { CHARACTERS } from '../data/characters';
+import { CHARACTERS, MAMORI_UTSUSHI_HEAL, type CharacterId } from '../data/characters';
 import { UPGRADES, type UpgradeDef } from '../data/upgrades';
 import {
   ENEMY_POOL_LIMIT,
@@ -21,6 +21,7 @@ import { SpawnSystem } from '../systems/SpawnSystem';
 import { EnemySystem } from '../systems/EnemySystem';
 import { PlayerSystem } from '../systems/PlayerSystem';
 import { PickupSystem } from '../systems/PickupSystem';
+import { AbilitySystem } from '../systems/AbilitySystem';
 import { Hud } from '../ui/Hud';
 import { GAME_WIDTH, GAME_HEIGHT } from '../config';
 
@@ -29,6 +30,8 @@ export class GameScene extends Phaser.Scene {
   rng!: Rng;
   runTime = 0;
   kills = 0;
+  /** 敵タイプ別の撃破数(可奈美の見取り稽古用) */
+  killsByType: Record<string, number> = {};
   xp = 0;
   level = 1;
   /** 強化の取得回数(id → 回数) */
@@ -47,7 +50,8 @@ export class GameScene extends Phaser.Scene {
   inputSystem!: InputSystem;
   spawnSystem!: SpawnSystem;
   enemySystem!: EnemySystem;
-  private playerSystem!: PlayerSystem;
+  playerSystem!: PlayerSystem;
+  abilitySystem!: AbilitySystem;
   private pickupSystem!: PickupSystem;
   private hud!: Hud;
   private bg!: Phaser.GameObjects.TileSprite;
@@ -61,6 +65,7 @@ export class GameScene extends Phaser.Scene {
     this.rng = new Rng(Date.now() >>> 0);
     this.runTime = 0;
     this.kills = 0;
+    this.killsByType = {};
     this.xp = 0;
     this.level = 1;
     this.takes = {};
@@ -74,8 +79,8 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(0);
 
-    // M2 は可奈美固定。キャラ選択は M3 で追加
-    this.player = new Player(this, CHARACTERS.kanami, 0, 0);
+    const charId = (this.registry.get('characterId') as CharacterId) ?? 'kanami';
+    this.player = new Player(this, CHARACTERS[charId], 0, 0);
     this.enemies = new ObjectPool(() => new Enemy(this), ENEMY_POOL_PREALLOC, ENEMY_POOL_LIMIT);
     this.gems = new ObjectPool(() => new Gem(this), 200, GEM_POOL_LIMIT);
     this.projectiles = new ObjectPool(() => new Projectile(this), 30, 100);
@@ -86,6 +91,7 @@ export class GameScene extends Phaser.Scene {
     this.spawnSystem = new SpawnSystem(this);
     this.enemySystem = new EnemySystem(this);
     this.playerSystem = new PlayerSystem(this);
+    this.abilitySystem = new AbilitySystem(this);
     this.pickupSystem = new PickupSystem(this);
     this.hud = new Hud(this);
 
@@ -109,7 +115,9 @@ export class GameScene extends Phaser.Scene {
     this.inputSystem.update();
     this.spawnSystem.update(dt);
     this.enemySystem.update(dt); // 移動・再生・空間ハッシュ再構築
-    this.playerSystem.update(dt); // 移動・オート攻撃(ハッシュ参照)・斬撃波
+    this.abilitySystem.update(dt); // 迅移・金剛身・八幡力(ハッシュ参照)
+    if (this.ended) return; // 能力処理中の撃破・被弾でラン終了した場合
+    this.playerSystem.update(dt); // 移動・オート攻撃・斬撃波
     this.enemySystem.contact(); // 接触ダメージ
     this.pickupSystem.update(dt);
     this.hud.update();
@@ -124,7 +132,14 @@ export class GameScene extends Phaser.Scene {
   /** 未消化のレベルアップがあれば 3 択を開く(1 回分ずつ) */
   private maybeOpenLevelUp(): void {
     if (this.choosing || this.pendingChoices <= 0 || this.ended) return;
-    const options = drawUpgrades(UPGRADES, this.takes, () => this.rng.next());
+    const ctx = { player: this.player };
+    const options = drawUpgrades(
+      UPGRADES,
+      this.takes,
+      () => this.rng.next(),
+      3,
+      (u) => u.isAvailable?.(ctx) ?? true,
+    );
     if (options.length === 0) {
       this.pendingChoices = 0; // 全強化取り切り
       return;
@@ -142,9 +157,29 @@ export class GameScene extends Phaser.Scene {
     this.choosing = false;
   }
 
+  /** 守りの型(舞衣): 金剛身でダメージを防ぐたび写しが回復 */
+  onGuarded(): void {
+    const p = this.player;
+    if (p.def.passive !== 'mamori') return;
+    p.health.utsushi = Math.min(p.health.utsushiMax, p.health.utsushi + MAMORI_UTSUSHI_HEAL);
+  }
+
+  /** 金剛身解除の衝撃波などのリング演出 */
+  showRing(x: number, y: number, radius: number): void {
+    const ring = this.add.image(x, y, 'ring').setDepth(9).setScale(radius / 40);
+    this.tweens.add({
+      targets: ring,
+      scale: (radius / 40) * 1.6,
+      alpha: 0,
+      duration: 250,
+      onComplete: () => ring.destroy(),
+    });
+  }
+
   /** 敵撃破: ノロジェムをドロップしてプールへ返す */
   killEnemy(enemy: Enemy): void {
     this.kills++;
+    this.killsByType[enemy.def.id] = (this.killsByType[enemy.def.id] ?? 0) + 1;
     for (const drop of enemy.def.gemDrop) {
       for (let i = 0; i < drop.count; i++) {
         const gem = this.gems.acquire();

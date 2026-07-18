@@ -24,6 +24,3 @@ export const GEM_MERGE_INTERVAL = 10;
 export const ENEMY_POOL_PREALLOC = 350;
 export const ENEMY_POOL_LIMIT = 400;
 export const GEM_POOL_LIMIT = 1000;
-
-/** 写し Lv1(全キャラ初期値。docs/03 §2.1) */
-export const UTSUSHI_LV1 = { capacity: 30, regenDelay: 5.0, regenRate: 5 };

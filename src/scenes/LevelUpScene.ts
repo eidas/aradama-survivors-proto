@@ -5,10 +5,12 @@ import { GAME_WIDTH, GAME_HEIGHT } from '../config';
 
 const CATEGORY_LABEL: Record<UpgradeDef['category'], string> = {
   okatana: '御刀強化',
+  kakuriyo: '隠世の力',
   body: '身体強化',
 };
 const CATEGORY_COLOR: Record<UpgradeDef['category'], number> = {
   okatana: 0xd9a441,
+  kakuriyo: 0xb060f0,
   body: 0x4a90d9,
 };
 
@@ -58,7 +60,7 @@ export class LevelUpScene extends Phaser.Scene {
         .text(cx, cy + 15, upg.textJa, {
           fontSize: '15px',
           color: '#c0c0d8',
-          wordWrap: { width: cardW - 40 },
+          wordWrap: { width: cardW - 40, useAdvancedWrap: true }, // 日本語は空白で折り返せないため
           align: 'center',
         })
         .setOrigin(0.5);

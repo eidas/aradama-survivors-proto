@@ -14,6 +14,9 @@ export class Hud {
   private killsText: Phaser.GameObjects.Text;
   private utsushiFill: Phaser.GameObjects.Rectangle;
   private hpFill: Phaser.GameObjects.Rectangle;
+  private jinIFill: Phaser.GameObjects.Rectangle;
+  private kongouFill: Phaser.GameObjects.Rectangle;
+  private chargeText: Phaser.GameObjects.Text;
   private debugText?: Phaser.GameObjects.Text;
 
   constructor(private game: GameScene) {
@@ -48,6 +51,18 @@ export class Hud {
       add.text(GAME_WIDTH - 14, GAME_HEIGHT - 30, '撃破: 0', { fontSize: '16px', color: '#e8e8ff' }).setOrigin(1, 0),
     );
 
+    // 能力インジケータ(HPバーの右)
+    const ax = 320;
+    fix(add.text(ax, by - 2, '迅移', { fontSize: '13px', color: '#80ffc0' }).setOrigin(0, 0));
+    fix(add.rectangle(ax + 42, by, 90, 12, 0x1a1a2e).setOrigin(0, 0));
+    this.jinIFill = fix(add.rectangle(ax + 42, by, 90, 12, 0x80ffc0).setOrigin(0, 0));
+    fix(add.text(ax, by + 18, '金剛', { fontSize: '13px', color: '#ffd700' }).setOrigin(0, 0));
+    fix(add.rectangle(ax + 42, by + 20, 90, 12, 0x1a1a2e).setOrigin(0, 0));
+    this.kongouFill = fix(add.rectangle(ax + 42, by + 20, 90, 12, 0xffd700).setOrigin(0, 0));
+    this.chargeText = fix(
+      add.text(ax + 150, by - 2, '', { fontSize: '15px', color: '#ffa040' }).setOrigin(0, 0),
+    );
+
     if (DEBUG) {
       this.debugText = fix(add.text(14, 30, '', { fontSize: '13px', color: '#7fff7f' }));
     }
@@ -68,6 +83,15 @@ export class Hud {
     this.utsushiFill.width = 220 * (h.utsushi / h.utsushiMax);
     this.hpFill.width = 220 * (h.hp / h.maxHp);
     this.killsText.setText(`撃破: ${g.kills}`);
+
+    const ab = g.abilitySystem;
+    this.jinIFill.width = 90 * ab.jinIReadyRatio;
+    this.kongouFill.width = 90 * Math.max(0, ab.kongoushinGauge / ab.kongoushinLevel.gauge);
+    const p = g.player;
+    const capStage = p.abilityLevels.hachimanriki;
+    const marks =
+      '▲'.repeat(p.chargeStage) + '△'.repeat(Math.max(0, capStage - p.chargeStage));
+    this.chargeText.setText(p.charging ? `八幡力 ${marks}` : '');
 
     if (this.debugText) {
       const fps = Math.round(g.game.loop.actualFps);

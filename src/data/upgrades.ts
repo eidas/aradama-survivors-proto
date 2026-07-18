@@ -1,9 +1,9 @@
 /**
  * レベルアップ強化プール(docs/03 §6)。
- * M2 時点では御刀強化 6 種+身体強化 5 種を実装。
- * 「隠世の力」4 種と能力連動の 3 種(迅移の残心・金剛の余韻・溜めの心得)は M3 で追加する。
+ * 御刀強化 6 種+隠世の力 4 種+身体強化 8 種 = 全 18 種。
  */
 import type { Player } from '../entities/Player';
+import type { AbilityId } from './characters';
 
 export interface UpgradeContext {
   player: Player;
@@ -11,12 +11,32 @@ export interface UpgradeContext {
 
 export interface UpgradeDef {
   id: string;
-  category: 'okatana' | 'body'; // M3 で 'kakuriyo' を追加
+  category: 'okatana' | 'kakuriyo' | 'body';
   nameJa: string;
   textJa: string;
   maxTakes: number;
   apply(ctx: UpgradeContext): void;
+  /** 追加の出現条件(隠世の力: キャラのキャップ未満のときだけ) */
+  isAvailable?(ctx: UpgradeContext): boolean;
 }
+
+const abilityUp = (
+  id: string,
+  ability: AbilityId,
+  nameJa: string,
+  textJa: string,
+): UpgradeDef => ({
+  id,
+  category: 'kakuriyo',
+  nameJa,
+  textJa,
+  maxTakes: 2, // Lv1 → 最大 Lv3。実際の上限は isAvailable のキャップ判定が握る
+  apply: ({ player }) => {
+    player.abilityLevels[ability]++;
+    if (ability === 'utsushi') player.applyUtsushiLevel();
+  },
+  isAvailable: ({ player }) => player.abilityLevels[ability] < player.def.abilityCaps[ability],
+});
 
 export const UPGRADES: readonly UpgradeDef[] = [
   // ── 御刀強化 ──
@@ -80,6 +100,11 @@ export const UPGRADES: readonly UpgradeDef[] = [
       player.mods.tsubazeriai = true;
     },
   },
+  // ── 隠世の力 ──
+  abilityUp('utsushi-up', 'utsushi', '写し深化', '写しのバリア容量と回復力が上がる(Lv+1)'),
+  abilityUp('jini-up', 'jinI', '迅移深化', '迅移の速度倍率が上がる(Lv+1、2.5倍→6.25倍→15.6倍)'),
+  abilityUp('kongoushin-up', 'kongoushin', '金剛身深化', '金剛身のゲージが伸び、解除時に反撃が付く(Lv+1)'),
+  abilityUp('hachimanriki-up', 'hachimanriki', '八幡力深化', '八幡力の溜め上限段階が増える(Lv+1)'),
   // ── 身体強化 ──
   {
     id: 'swift-feet',
@@ -108,6 +133,7 @@ export const UPGRADES: readonly UpgradeDef[] = [
     textJa: '写しの回復開始が 1.0 秒早くなる',
     maxTakes: 1,
     apply: ({ player }) => {
+      player.mods.utsushiDelayBonus -= 1;
       player.health.utsushiRegenDelay = Math.max(1, player.health.utsushiRegenDelay - 1);
     },
   },
@@ -129,6 +155,36 @@ export const UPGRADES: readonly UpgradeDef[] = [
     maxTakes: 2,
     apply: ({ player }) => {
       player.health.maxHp += 25;
+    },
+  },
+  {
+    id: 'zanshin',
+    category: 'body',
+    nameJa: '迅移の残心',
+    textJa: '迅移の終了後 1 秒間、攻撃力 +50%',
+    maxTakes: 1,
+    apply: ({ player }) => {
+      player.mods.jinIZanshin = true;
+    },
+  },
+  {
+    id: 'kongou-yoin',
+    category: 'body',
+    nameJa: '金剛の余韻',
+    textJa: '金剛身のゲージ回復速度 +50%',
+    maxTakes: 1,
+    apply: ({ player }) => {
+      player.mods.kongouYoin = true;
+    },
+  },
+  {
+    id: 'tame-kokoroe',
+    category: 'body',
+    nameJa: '溜めの心得',
+    textJa: '八幡力の溜め時間 −25%',
+    maxTakes: 1,
+    apply: ({ player }) => {
+      player.mods.chargeTimeMul = 0.75;
     },
   },
 ];

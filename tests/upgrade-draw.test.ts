@@ -47,15 +47,15 @@ describe('drawUpgrades(レベルアップ 3 択抽選)', () => {
     expect(picked.map((u) => u.id)).not.toContain('a');
   });
 
-  it('実データ: 全 11 種を取り切ると抽選が空になる', () => {
+  it('実データ: 全 18 種を取り切ると抽選が空になる', () => {
     const takes: Record<string, number> = {};
     for (const u of UPGRADES) takes[u.id] = u.maxTakes;
     expect(drawUpgrades(UPGRADES, takes, seq(0.5))).toHaveLength(0);
   });
 
   it('実データ: 合計取得可能回数が docs/03 の想定と一致する', () => {
-    // 斬撃強化5+疾さ5+大振り3+二連斬1+斬撃波3+鍔迫り1+健脚3+気配察知3+深呼吸1+手当て3+胆力2 = 30
+    // 御刀: 5+5+3+1+3+1=18、隠世: 2×4=8、身体: 3+3+1+3+2+1+1+1=15 → 41
     const total = UPGRADES.reduce((s, u) => s + u.maxTakes, 0);
-    expect(total).toBe(30);
+    expect(total).toBe(41);
   });
 });

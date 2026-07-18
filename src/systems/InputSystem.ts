@@ -2,7 +2,11 @@ import Phaser from 'phaser';
 import type { GameScene } from '../scenes/GameScene';
 import { DEBUG } from '../config';
 
-/** キーボード入力を正規化して player.moveX/Y に書く。DEV ビルドではデバッグキーも処理 */
+/**
+ * キーボード入力を正規化して player.moveX/Y に書く。
+ * 能力キー: Shift=迅移 / E か右クリック=金剛身(長押し) / Space=八幡力(長押し溜め)。
+ * DEV ビルドではデバッグキーも処理。
+ */
 export class InputSystem {
   private keys: {
     up: Phaser.Input.Keyboard.Key;
@@ -13,6 +17,9 @@ export class InputSystem {
     down2: Phaser.Input.Keyboard.Key;
     left2: Phaser.Input.Keyboard.Key;
     right2: Phaser.Input.Keyboard.Key;
+    dash: Phaser.Input.Keyboard.Key;
+    guard: Phaser.Input.Keyboard.Key;
+    charge: Phaser.Input.Keyboard.Key;
   };
   private debugKeys?: {
     stress: Phaser.Input.Keyboard.Key;
@@ -31,7 +38,11 @@ export class InputSystem {
       down2: kb.addKey('DOWN'),
       left2: kb.addKey('LEFT'),
       right2: kb.addKey('RIGHT'),
+      dash: kb.addKey('SHIFT'),
+      guard: kb.addKey('E'),
+      charge: kb.addKey('SPACE'),
     };
+    game.input.mouse?.disableContextMenu(); // 右クリック=金剛身のため
     if (DEBUG) {
       this.debugKeys = {
         stress: kb.addKey('O'),
@@ -39,6 +50,19 @@ export class InputSystem {
         invincible: kb.addKey('I'),
       };
     }
+  }
+
+  /** 迅移の押下エッジ(フレーム内で 1 回だけ呼ぶこと。JustDown は消費型) */
+  dashJustPressed(): boolean {
+    return Phaser.Input.Keyboard.JustDown(this.keys.dash);
+  }
+
+  get guardHeld(): boolean {
+    return this.keys.guard.isDown || this.game.input.activePointer.rightButtonDown();
+  }
+
+  get chargeHeld(): boolean {
+    return this.keys.charge.isDown;
   }
 
   update(): void {
