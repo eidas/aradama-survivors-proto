@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cmd=$(jq -r '.tool_input.command // \"\"'); case \"$cmd\" in *\"git commit\"*) out=$(git push origin HEAD 2>&1) || { echo \"自動プッシュ失敗: $out\" >&2; exit 2; }; echo \"自動プッシュ完了 ($(git rev-parse --abbrev-ref HEAD))\";; esac",
+            "timeout": 60,
+            "statusMessage": "GitHubへ自動プッシュ中..."
+          }
+        ]
+      }
+    ]
+  }
+}
