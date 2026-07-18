@@ -3,10 +3,13 @@ import { Rng } from '../core/Rng';
 import { SpatialHash } from '../core/SpatialHash';
 import { ObjectPool } from '../core/ObjectPool';
 import { xpForNext } from '../core/xp';
+import { drawUpgrades } from '../core/upgradeDraw';
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
 import { Gem } from '../entities/Gem';
+import { Projectile } from '../entities/Projectile';
 import { CHARACTERS } from '../data/characters';
+import { UPGRADES, type UpgradeDef } from '../data/upgrades';
 import {
   ENEMY_POOL_LIMIT,
   ENEMY_POOL_PREALLOC,
@@ -28,16 +31,22 @@ export class GameScene extends Phaser.Scene {
   kills = 0;
   xp = 0;
   level = 1;
+  /** 強化の取得回数(id → 回数) */
+  takes: Record<string, number> = {};
+  /** 未消化のレベルアップ 3 択の数 */
+  private pendingChoices = 0;
+  private choosing = false;
 
   player!: Player;
   enemies!: ObjectPool<Enemy>;
   gems!: ObjectPool<Gem>;
+  projectiles!: ObjectPool<Projectile>;
   enemyHash!: SpatialHash<Enemy>;
   gemHash!: SpatialHash<Gem>;
 
   inputSystem!: InputSystem;
   spawnSystem!: SpawnSystem;
-  private enemySystem!: EnemySystem;
+  enemySystem!: EnemySystem;
   private playerSystem!: PlayerSystem;
   private pickupSystem!: PickupSystem;
   private hud!: Hud;
@@ -54,6 +63,9 @@ export class GameScene extends Phaser.Scene {
     this.kills = 0;
     this.xp = 0;
     this.level = 1;
+    this.takes = {};
+    this.pendingChoices = 0;
+    this.choosing = false;
     this.ended = false;
 
     this.bg = this.add
@@ -62,10 +74,11 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(0);
 
-    // M1 は可奈美固定。キャラ選択は M3 で追加
+    // M2 は可奈美固定。キャラ選択は M3 で追加
     this.player = new Player(this, CHARACTERS.kanami, 0, 0);
     this.enemies = new ObjectPool(() => new Enemy(this), ENEMY_POOL_PREALLOC, ENEMY_POOL_LIMIT);
     this.gems = new ObjectPool(() => new Gem(this), 200, GEM_POOL_LIMIT);
+    this.projectiles = new ObjectPool(() => new Projectile(this), 30, 100);
     this.enemyHash = new SpatialHash<Enemy>(64);
     this.gemHash = new SpatialHash<Gem>(64);
 
@@ -96,14 +109,37 @@ export class GameScene extends Phaser.Scene {
     this.inputSystem.update();
     this.spawnSystem.update(dt);
     this.enemySystem.update(dt); // 移動・再生・空間ハッシュ再構築
-    this.playerSystem.update(dt); // 移動・オート攻撃(ハッシュ参照)
+    this.playerSystem.update(dt); // 移動・オート攻撃(ハッシュ参照)・斬撃波
     this.enemySystem.contact(); // 接触ダメージ
     this.pickupSystem.update(dt);
     this.hud.update();
 
     this.bg.setTilePosition(this.cameras.main.scrollX, this.cameras.main.scrollY);
 
-    if (this.runTime >= RUN_DURATION) this.endRun(true); // M1: ボス未実装のため時間到達でクリア
+    this.maybeOpenLevelUp();
+
+    if (this.runTime >= RUN_DURATION) this.endRun(true); // M4 でボス撃破条件に差し替え
+  }
+
+  /** 未消化のレベルアップがあれば 3 択を開く(1 回分ずつ) */
+  private maybeOpenLevelUp(): void {
+    if (this.choosing || this.pendingChoices <= 0 || this.ended) return;
+    const options = drawUpgrades(UPGRADES, this.takes, () => this.rng.next());
+    if (options.length === 0) {
+      this.pendingChoices = 0; // 全強化取り切り
+      return;
+    }
+    this.choosing = true;
+    this.scene.launch('LevelUp', { options, level: this.level });
+    this.scene.pause();
+  }
+
+  /** LevelUpScene からの選択結果を適用 */
+  applyUpgrade(upg: UpgradeDef): void {
+    upg.apply({ player: this.player });
+    this.takes[upg.id] = (this.takes[upg.id] ?? 0) + 1;
+    this.pendingChoices--;
+    this.choosing = false;
   }
 
   /** 敵撃破: ノロジェムをドロップしてプールへ返す */
@@ -133,6 +169,7 @@ export class GameScene extends Phaser.Scene {
     while (this.xp >= xpForNext(this.level)) {
       this.xp -= xpForNext(this.level);
       this.level++;
+      this.pendingChoices++;
       this.events.emit('level-up', this.level);
     }
   }

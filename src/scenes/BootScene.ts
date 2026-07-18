@@ -40,6 +40,54 @@ export class BootScene extends Phaser.Scene {
     g.generateTexture('enemy-insect', 24, 24);
     g.clear();
 
+    // 荒魂・鳥型: 黒い三角 + 橙コア
+    g.fillStyle(0x0a0a0a);
+    g.beginPath();
+    g.moveTo(11, 2);
+    g.lineTo(21, 18);
+    g.lineTo(1, 18);
+    g.closePath();
+    g.fillPath();
+    g.fillStyle(0xff8a2a);
+    g.fillCircle(11, 12, 2.5);
+    g.generateTexture('enemy-bird', 22, 22);
+    g.clear();
+
+    // 荒魂・鹿型: 縦長の黒菱形 + 橙コア
+    g.fillStyle(0x0a0a0a);
+    g.beginPath();
+    g.moveTo(13, 1);
+    g.lineTo(25, 14);
+    g.lineTo(13, 27);
+    g.lineTo(1, 14);
+    g.closePath();
+    g.fillPath();
+    g.fillStyle(0xff5a1a);
+    g.fillCircle(13, 10, 3);
+    g.generateTexture('enemy-deer', 26, 28);
+    g.clear();
+
+    // 荒魂・熊型: 大きな黒円 + 赤コア 2 つ
+    g.fillStyle(0x0a0a0a);
+    g.fillCircle(17, 17, 16);
+    g.lineStyle(1, 0x2a1010);
+    g.strokeCircle(17, 17, 16);
+    g.fillStyle(0xff2020);
+    g.fillCircle(12, 13, 3);
+    g.fillCircle(22, 13, 3);
+    g.fillStyle(0xff5a1a, 0.8);
+    g.fillCircle(17, 23, 2.5);
+    g.generateTexture('enemy-bear', 34, 34);
+    g.clear();
+
+    // 斬撃波(飛ぶ斬撃): 白い弧
+    g.lineStyle(4, 0xd8ecff, 0.95);
+    g.beginPath();
+    g.arc(4, 14, 12, Phaser.Math.DegToRad(-60), Phaser.Math.DegToRad(60));
+    g.strokePath();
+    g.generateTexture('slash-wave', 22, 28);
+    g.clear();
+
     // ノロジェム S/M/L(黒紫の結晶)
     this.makeGemTexture(g, 'gem-s', 5, 0x9b5cf0);
     this.makeGemTexture(g, 'gem-m', 7, 0xb04ce0);

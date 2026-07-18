@@ -1,19 +1,57 @@
 import type { GameScene } from '../scenes/GameScene';
 import { ENEMIES } from '../data/enemies';
-import { spawnRatePerSec, pickEnemyId } from '../data/waves';
+import { spawnRatePerSec, pickEnemyId, WAVE_EVENTS } from '../data/waves';
 import { timeScale } from '../core/combat';
 
-/** ウェーブテーブルに従い、カメラ外周の帯(+80〜160px)から敵を湧かせる */
+/** ウェーブテーブルに従う敵湧きと、時刻指定イベント(群れ突進・大包囲)の発火 */
 export class SpawnSystem {
   private acc = 0;
+  private nextEventIdx = 0;
 
   constructor(private game: GameScene) {}
 
   update(dt: number): void {
-    this.acc += spawnRatePerSec(this.game.runTime) * dt;
+    const g = this.game;
+
+    this.acc += spawnRatePerSec(g.runTime) * dt;
     while (this.acc >= 1) {
       this.acc -= 1;
       this.spawnOne();
+    }
+
+    while (this.nextEventIdx < WAVE_EVENTS.length && g.runTime >= WAVE_EVENTS[this.nextEventIdx].at) {
+      this.fireEvent(WAVE_EVENTS[this.nextEventIdx].type);
+      this.nextEventIdx++;
+    }
+  }
+
+  private fireEvent(type: 'deerRush' | 'encircle'): void {
+    const g = this.game;
+    if (type === 'deerRush') {
+      // 6:00 鹿型 8 体が同時に取り囲んで突進してくる
+      this.spawnRing('deer', 8, 500, 600);
+    } else {
+      // 13:00 蟲型の大包囲: 外周から円環湧き
+      this.spawnRing('insect', 40, 550, 700);
+    }
+    g.cameras.main.shake(300, 0.003); // イベント発生の合図
+  }
+
+  private spawnRing(enemyId: string, count: number, minDist: number, maxDist: number): void {
+    const g = this.game;
+    const def = ENEMIES[enemyId];
+    const baseAngle = g.rng.next() * Math.PI * 2;
+    for (let i = 0; i < count; i++) {
+      const enemy = g.enemies.acquire();
+      if (!enemy) return;
+      const angle = baseAngle + (i / count) * Math.PI * 2;
+      const dist = g.rng.range(minDist, maxDist);
+      enemy.spawn(
+        def,
+        g.player.x + Math.cos(angle) * dist,
+        g.player.y + Math.sin(angle) * dist,
+        timeScale(g.runTime),
+      );
     }
   }
 
@@ -21,7 +59,7 @@ export class SpawnSystem {
     const g = this.game;
     const def = ENEMIES[pickEnemyId(g.runTime, g.rng.next())];
     const enemy = g.enemies.acquire();
-    if (!enemy) return; // プール上限。M1 では単純に湧きをスキップ
+    if (!enemy) return; // プール上限。単純に湧きをスキップ
 
     const cam = g.cameras.main;
     const margin = g.rng.range(80, 160);

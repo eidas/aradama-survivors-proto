@@ -28,11 +28,12 @@ export class PickupSystem {
       g.gemHash.insert(gem, gem.x, gem.y, 4);
     }
 
-    // 吸引開始判定
-    const near = g.gemHash.queryCircle(p.x, p.y, p.def.pickupRadius, this.queryBuf);
+    // 吸引開始判定(気配察知の倍率込み)
+    const pickupRadius = p.pickupRadius;
+    const near = g.gemHash.queryCircle(p.x, p.y, pickupRadius, this.queryBuf);
     for (const gem of near) {
       const d2 = (gem.x - p.x) ** 2 + (gem.y - p.y) ** 2;
-      if (d2 <= p.def.pickupRadius ** 2) gem.magnetized = true;
+      if (d2 <= pickupRadius ** 2) gem.magnetized = true;
     }
 
     // 吸引移動と回収(release があるためスナップショットを逆順走査)

@@ -22,7 +22,7 @@ export class TitleScene extends Phaser.Scene {
       .setOrigin(0.5);
     this.tweens.add({ targets: prompt, alpha: 0.3, duration: 700, yoyo: true, repeat: -1 });
     this.add
-      .text(cx, GAME_HEIGHT * 0.88, '移動: WASD / 矢印キー   攻撃: オート(M1 骨格ビルド)', {
+      .text(cx, GAME_HEIGHT * 0.88, '移動: WASD / 矢印キー   攻撃: オート   レベルアップ: 1/2/3 かクリックで選択', {
         fontSize: '16px',
         color: '#8888aa',
       })

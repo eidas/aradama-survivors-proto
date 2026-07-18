@@ -18,6 +18,15 @@ export class Enemy implements Poolable {
   flashTimer = 0;
   def!: EnemyDef;
 
+  // AI 状態(意味は EnemySystem の各ビヘイビア参照)
+  aiState = 0;
+  aiTimer = 0;
+  dirX = 0;
+  dirY = 0;
+  orbitAngle = 0;
+  /** 予備動作中(鍔迫りの打ち消し対象判定にも使う) */
+  telegraphing = false;
+
   readonly sprite: Phaser.GameObjects.Image;
 
   constructor(scene: Phaser.Scene) {
@@ -35,6 +44,12 @@ export class Enemy implements Poolable {
     this.radius = def.radius;
     this.lastHitAt = -999;
     this.flashTimer = 0;
+    this.aiState = 0;
+    this.aiTimer = 0;
+    this.dirX = 0;
+    this.dirY = 0;
+    this.orbitAngle = 0;
+    this.telegraphing = false;
     this.sprite.setTexture(def.textureKey).setPosition(x, y).setVisible(true).clearTint();
   }
 
@@ -46,6 +61,8 @@ export class Enemy implements Poolable {
     this.sprite.setPosition(this.x, this.y);
     if (this.flashTimer > 0) {
       this.sprite.setTintFill(0xffffff);
+    } else if (this.telegraphing) {
+      this.sprite.setTint(0xffaa00); // 予備動作: コアの発光が強まる表現
     } else {
       this.sprite.clearTint();
     }
