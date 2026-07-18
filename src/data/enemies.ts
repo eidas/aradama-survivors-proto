@@ -1,7 +1,7 @@
-/** 敵定義(docs/03 §4)。M2: E1〜E4。E5 百足型・E6 大型集合体は M4 で追加 */
+/** 敵定義(docs/03 §4)。E1〜E4 通常敵+E5 百足型(中ボス)+E6 大型集合体(ボス) */
 import type { GemSize } from './balance';
 
-export type AiKind = 'chase' | 'orbitDive' | 'charge' | 'tank';
+export type AiKind = 'chase' | 'orbitDive' | 'charge' | 'tank' | 'centipede' | 'boss';
 
 export interface EnemyDef {
   id: string;
@@ -61,6 +61,52 @@ export const ENEMIES: Record<string, EnemyDef> = {
       stun: 1.0,
     },
     textureKey: 'enemy-deer',
+  },
+  // E5 百足型(中ボス): 頭+節の連結体。移動は CentipedeController が管轄
+  centipedeHead: {
+    id: 'centipedeHead',
+    hp: 60,
+    speed: 130,
+    contactDamage: 18,
+    radius: 14,
+    gemDrop: [{ size: 'L', count: 5 }],
+    ai: 'centipede',
+    aiParams: { segmentGap: 24, weaveAmp: 0.6, weaveFreq: 4 },
+    textureKey: 'enemy-centi-head',
+  },
+  centipedeSeg: {
+    id: 'centipedeSeg',
+    hp: 60,
+    speed: 130,
+    contactDamage: 18,
+    radius: 12,
+    gemDrop: [],
+    ai: 'centipede',
+    aiParams: {},
+    textureKey: 'enemy-centi-seg',
+  },
+  // E6 大型集合体(ボス): 撃破でクリア。時間スケーリングなし(HP 2500 固定)
+  amalgam: {
+    id: 'amalgam',
+    hp: 2500,
+    speed: 70,
+    contactDamage: 30,
+    radius: 40,
+    gemDrop: [],
+    ai: 'boss',
+    aiParams: {
+      actionInterval: 2.5,
+      sweepRange: 120,
+      sweepTelegraph: 0.8,
+      chargeTelegraph: 1.0,
+      chargeSpeed: 300,
+      chargeDuration: 1.2,
+      absorbDuration: 3.0,
+      absorbRange: 400,
+      maxRadius: 70,
+      recover: 0.8,
+    },
+    textureKey: 'enemy-amalgam',
   },
   bear: {
     id: 'bear',

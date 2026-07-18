@@ -26,6 +26,8 @@ export class Enemy implements Poolable {
   orbitAngle = 0;
   /** 予備動作中(鍔迫りの打ち消し対象判定にも使う) */
   telegraphing = false;
+  /** spawn ごとに増える世代番号。プール再利用後の古い参照を無効判定するために使う */
+  generation = 0;
 
   readonly sprite: Phaser.GameObjects.Image;
 
@@ -50,7 +52,8 @@ export class Enemy implements Poolable {
     this.dirY = 0;
     this.orbitAngle = 0;
     this.telegraphing = false;
-    this.sprite.setTexture(def.textureKey).setPosition(x, y).setVisible(true).clearTint();
+    this.generation++;
+    this.sprite.setTexture(def.textureKey).setPosition(x, y).setVisible(true).clearTint().setScale(1);
   }
 
   despawn(): void {
@@ -59,6 +62,8 @@ export class Enemy implements Poolable {
 
   syncSprite(): void {
     this.sprite.setPosition(this.x, this.y);
+    // ボスの吸収成長など、半径が定義値から変わったらスプライトも拡大
+    if (this.radius !== this.def.radius) this.sprite.setScale(this.radius / this.def.radius);
     if (this.flashTimer > 0) {
       this.sprite.setTintFill(0xffffff);
     } else if (this.telegraphing) {
