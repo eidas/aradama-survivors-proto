@@ -1,5 +1,6 @@
 import type { GameScene } from '../scenes/GameScene';
 import type { Gem } from '../entities/Gem';
+import { audio } from '../core/audio';
 import {
   GEM_MERGE_COUNT,
   GEM_MERGE_INTERVAL,
@@ -65,6 +66,7 @@ export class PickupSystem {
     const g = this.game;
     gem.despawn();
     g.gems.release(gem);
+    audio.pickup();
     g.addXp(gem.value);
   }
 

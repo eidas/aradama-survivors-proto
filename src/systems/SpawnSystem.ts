@@ -13,7 +13,9 @@ export class SpawnSystem {
   update(dt: number): void {
     const g = this.game;
 
-    this.acc += spawnRatePerSec(g.runTime) * dt;
+    // 中ボス生存中は通常湧き 50%(docs/03 §5.1)
+    const rateMul = g.centipede?.alive ? 0.5 : 1;
+    this.acc += spawnRatePerSec(g.runTime) * rateMul * dt;
     while (this.acc >= 1) {
       this.acc -= 1;
       this.spawnOne();
@@ -25,14 +27,23 @@ export class SpawnSystem {
     }
   }
 
-  private fireEvent(type: 'deerRush' | 'encircle'): void {
+  private fireEvent(type: 'deerRush' | 'encircle' | 'centipede' | 'boss'): void {
     const g = this.game;
-    if (type === 'deerRush') {
-      // 6:00 鹿型 8 体が同時に取り囲んで突進してくる
-      this.spawnRing('deer', 8, 500, 600);
-    } else {
-      // 13:00 蟲型の大包囲: 外周から円環湧き
-      this.spawnRing('insect', 40, 550, 700);
+    switch (type) {
+      case 'deerRush':
+        // 6:00 鹿型 8 体が同時に取り囲んで突進してくる
+        this.spawnRing('deer', 8, 500, 600);
+        break;
+      case 'encircle':
+        // 13:00 蟲型の大包囲: 外周から円環湧き
+        this.spawnRing('insect', 40, 550, 700);
+        break;
+      case 'centipede':
+        g.spawnCentipede();
+        break;
+      case 'boss':
+        g.spawnBoss();
+        break;
     }
     g.cameras.main.shake(300, 0.003); // イベント発生の合図
   }

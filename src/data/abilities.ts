@@ -22,10 +22,10 @@ export interface HachimanrikiStage {
   rangeMul: number;
 }
 
-/** index = Lv-1 */
+/** index = Lv-1。regenDelay はバランス調整パスで docs/03 の初期案(5.0/4.0/3.0)から短縮(docs/05) */
 export const UTSUSHI_LEVELS: UtsushiLevel[] = [
-  { capacity: 30, regenDelay: 5.0, regenRate: 5 },
-  { capacity: 50, regenDelay: 4.0, regenRate: 8 },
+  { capacity: 30, regenDelay: 4.0, regenRate: 5 },
+  { capacity: 50, regenDelay: 3.5, regenRate: 8 },
   { capacity: 80, regenDelay: 3.0, regenRate: 12 },
 ];
 

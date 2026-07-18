@@ -7,6 +7,7 @@ import {
   KONGOUSHIN_LOCKOUT,
   computeChargeStage,
 } from '../data/abilities';
+import { audio } from '../core/audio';
 
 type JinIState = 'ready' | 'active' | 'cooldown';
 type KongoushinState = 'ready' | 'guarding' | 'lockout';
@@ -92,6 +93,7 @@ export class AbilitySystem {
       } else if (held && !p.dashing && this.kongoushinGauge > 0.2) {
         this.kongoushinState = 'guarding';
         this.chargeTime = 0; // 金剛身中は攻撃停止 → 溜めもリセット
+        audio.guardOn();
       }
     }
     p.guarding = this.kongoushinState === 'guarding';
@@ -103,6 +105,7 @@ export class AbilitySystem {
     const p = g.player;
     const lv = this.kongoushinLevel;
     if (lv.knockbackRadius <= 0) return;
+    audio.shockwave();
 
     const candidates = g.enemyHash.queryCircle(p.x, p.y, lv.knockbackRadius + 20, this.queryBuf);
     for (const e of candidates) {
@@ -130,6 +133,7 @@ export class AbilitySystem {
         this.jinIState = 'active';
         this.jinITimer = lv.duration;
         this.dashHit.clear();
+        audio.dash();
         // 発動方向: 入力方向、なければ向いている方向
         if (p.moveX !== 0 || p.moveY !== 0) {
           this.dashDirX = p.moveX;
@@ -202,7 +206,9 @@ export class AbilitySystem {
     if (held) {
       this.chargeTime += dt;
       p.charging = true;
-      p.chargeStage = computeChargeStage(this.chargeTime, maxStage, p.mods.chargeTimeMul);
+      const newStage = computeChargeStage(this.chargeTime, maxStage, p.mods.chargeTimeMul);
+      if (newStage > p.chargeStage) audio.chargeStage(newStage); // 段階到達音
+      p.chargeStage = newStage;
     } else {
       if (p.charging && p.chargeStage > 0) {
         g.playerSystem.releaseCharge(p.chargeStage);

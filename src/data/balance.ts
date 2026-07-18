@@ -8,8 +8,10 @@ export const ARADAMA_REGEN_RATE = 0.05;
 /** 経過 1 分あたりの敵 HP・接触ダメージ増加率 */
 export const TIME_SCALING_PER_MIN = 0.08;
 
-/** 1 ランの長さ(秒) */
+/** ボス出現時刻(秒)= 15:00 */
 export const RUN_DURATION = 900;
+/** ボス討伐の制限時刻(秒)= 18:00。超過は敗北 */
+export const BOSS_TIMEOUT = 1080;
 
 /** ノロジェムの価値 */
 export const GEM_VALUES = { S: 1, M: 5, L: 25 } as const;

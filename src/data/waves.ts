@@ -13,7 +13,7 @@ export interface WavePhase {
 
 export interface WaveEvent {
   at: number; // 秒
-  type: 'deerRush' | 'encircle';
+  type: 'deerRush' | 'encircle' | 'centipede' | 'boss';
 }
 
 export const WAVES: WavePhase[] = [
@@ -64,7 +64,9 @@ export const WAVES: WavePhase[] = [
 
 export const WAVE_EVENTS: WaveEvent[] = [
   { at: 360, type: 'deerRush' }, // 6:00 鹿型の群れ突進(8 体同時)
+  { at: 450, type: 'centipede' }, // 7:30 中ボス百足型(通常湧き 50% に減少)
   { at: 780, type: 'encircle' }, // 13:00 蟲型の大包囲(外周から円環湧き)
+  { at: 900, type: 'boss' }, // 15:00 大型集合体。撃破でクリア、18:00 超過で敗北
 ];
 
 /** runTime 秒時点の毎秒湧き数を返す */

@@ -141,10 +141,11 @@ export const UPGRADES: readonly UpgradeDef[] = [
     id: 'first-aid',
     category: 'body',
     nameJa: '手当て',
-    textJa: 'HP を 30 回復(即時)',
+    textJa: 'HP を 40 回復(即時)',
     maxTakes: 3,
     apply: ({ player }) => {
-      player.health.hp = Math.min(player.health.maxHp, player.health.hp + 30);
+      // 30 → 40 に増量(調整パス: 中盤以降のピック価値維持。docs/05)
+      player.health.hp = Math.min(player.health.maxHp, player.health.hp + 40);
     },
   },
   {

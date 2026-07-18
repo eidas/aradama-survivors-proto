@@ -93,6 +93,40 @@ export class BootScene extends Phaser.Scene {
     this.makeGemTexture(g, 'gem-m', 7, 0xb04ce0);
     this.makeGemTexture(g, 'gem-l', 9, 0xd040c0);
 
+    // 荒魂・百足型の頭: 黒円 + 橙コア + 顎
+    g.fillStyle(0x0a0a0a);
+    g.fillCircle(15, 15, 14);
+    g.fillTriangle(24, 8, 30, 15, 24, 22);
+    g.fillStyle(0xff5a1a);
+    g.fillCircle(18, 11, 3.5);
+    g.fillCircle(18, 19, 3.5);
+    g.generateTexture('enemy-centi-head', 32, 30);
+    g.clear();
+
+    // 荒魂・百足型の節: 黒円 + 赤点
+    g.fillStyle(0x0a0a0a);
+    g.fillCircle(13, 13, 12);
+    g.lineStyle(1, 0x2a1010);
+    g.strokeCircle(13, 13, 12);
+    g.fillStyle(0xff2020, 0.85);
+    g.fillCircle(13, 13, 3);
+    g.generateTexture('enemy-centi-seg', 26, 26);
+    g.clear();
+
+    // 荒魂・大型集合体(ボス): 不定形の黒塊 + 3 つの発光コア
+    g.fillStyle(0x0a0a0a);
+    g.fillCircle(42, 42, 40);
+    g.fillCircle(20, 30, 16);
+    g.fillCircle(64, 34, 14);
+    g.fillCircle(38, 68, 13);
+    g.fillStyle(0xff2020);
+    g.fillCircle(30, 36, 6);
+    g.fillStyle(0xff5a1a);
+    g.fillCircle(54, 44, 5);
+    g.fillCircle(40, 58, 4);
+    g.generateTexture('enemy-amalgam', 84, 84);
+    g.clear();
+
     // 衝撃波リング(金剛身の解除反撃など)
     g.lineStyle(4, 0xffd700, 0.9);
     g.strokeCircle(42, 42, 40);
