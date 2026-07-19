@@ -6,12 +6,7 @@
 
 ## MUST
 
-### A2 | DOING | ポーズメニュー(ESC)
-ESC でゲームを一時停止し、「再開 / リスタート / タイトルへ」の3択メニューを出す。
-- 受け入れ: ESCで開閉 / 停止中は敵・タイマー完全停止 / 3操作すべて動作 / レベルアップ3択中は開かない
-- 制約: LevelUpScene と同じオーバーレイ方式
-
-### A1 | TODO | リザルトに敵タイプ別撃破数
+### A1 | DOING | リザルトに敵タイプ別撃破数
 リザルト画面に敵タイプごとの撃破数(蟲/鳥/鹿/熊/百足/ボス)を表示する。
 - 受け入れ: killsByType の内訳が日本語名で表示される / 0体のタイプは省略
 
@@ -49,8 +44,14 @@ EnemySystem 内のボス処理(updateBoss/bossSpit/bossAbsorb)を独立モジュ
 - ボス名テキストとタイマー表示の余白調整(B2レビューより)
 - `'amalgam'` 等の敵IDリテラル比較を定数参照へ(B2レビューより)
 - ボス撃破時に `GameScene.boss = null` の明示リセット(B2レビューより)
+- ポーズ中の BGM 減衰またはミュート(A2レビューより)
+- PauseScene の restart/toTitle の冗長な scene.stop() 整理、InputSystem の到達不能な isChoosing ガード整理(A2レビューより)
 
 ## DONE
 
 ### B2 | DONE | ボス戦HPバー
 コミット ccb5891。verify PASS(スモーク: 撃破40/fps51→36)。Reviewer APPROVE(blocking 0)
+
+### A2 | DONE | ポーズメニュー(ESC)
+コミット 32964dd。verify PASS(スモーク: 撃破39/fps51→38)。Reviewer APPROVE(blocking 0)。
+既知の制約: ポーズ中は M キー等の入力不可(仕様許容)
