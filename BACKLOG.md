@@ -8,11 +8,7 @@
 
 ## SHOULD
 
-### Q1 | DOING | ボスAIの分離リファクタ
-EnemySystem 内のボス処理(updateBoss/bossSpit/bossAbsorb)を独立モジュールへ分離する。
-- 受け入れ: 挙動不変(テスト・スモーク通過)/ EnemySystem の行数削減
-
-### T1 | TODO | 能力使用ボットでの再計測
+### T1 | DOING | 能力使用ボットでの再計測
 自動操縦ボットに迅移(囲まれたら)・金剛身(急降下予兆で)を使わせ、docs/05 に結果を追記。
 - 受け入れ: docs/05 に計測表追加 / 必要ならデータ調整の提案(適用は別タスク)
 
@@ -34,6 +30,7 @@ EnemySystem 内のボス処理(updateBoss/bossSpit/bossAbsorb)を独立モジュ
 - リザルトの左右ブロック配置のレイアウトヘルパー化(A1レビューより)
 - 迅移トレイルのプール16は Lv3+健脚ビルドでギリギリ。emitTrail の距離補間を src/core に切り出してテスト化も検討(B1レビューより)
 - ダメージ数字 OFF 切替時に表示中ポップを即時消去する厳密化、docs/04 §5 プール表の記載を実装(遅延確保200)に合わせる(A3レビューより)
+- enemyAiUtils.moveToward の単体テスト追加(Q1レビューより)
 
 ## DONE
 
@@ -55,6 +52,9 @@ EnemySystem 内のボス処理(updateBoss/bossSpit/bossAbsorb)を独立モジュ
 
 ### A3 | DONE | ダメージ数字表示オプション
 コミット 79eb1ee。verify PASS(OFF時fps同水準)。Reviewer APPROVE(blocking 0)
+
+### Q1 | DONE | ボスAIの分離リファクタ
+コミット cca91b9。verify PASS。EnemySystem 379→217行。Reviewer APPROVE(移動前後の全文突き合わせで挙動不変を確認)
 
 ---
 Gate 4 記録(3タスク時点): verify 約30秒(<5分 ✓)/ テスト 43→47件(増加 ✓)/ 直近6コミットに revert なし ✓
