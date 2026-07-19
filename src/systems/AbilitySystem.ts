@@ -12,6 +12,9 @@ import { audio } from '../core/audio';
 type JinIState = 'ready' | 'active' | 'cooldown';
 type KongoushinState = 'ready' | 'guarding' | 'lockout';
 
+/** 迅移の残像トレイルの配置間隔(px)。時間ベースだと Lv3(15.625倍速)で間隔がスカスカになるため距離ベース(docs/03 §8) */
+const JINI_TRAIL_SPACING = 40;
+
 /**
  * 隠世の力の状態遷移(docs/04 §7.1)。
  *   迅移:   Ready → Active(duration) → Cooldown → Ready
@@ -26,6 +29,8 @@ export class AbilitySystem {
   private dashDirX = 1;
   private dashDirY = 0;
   private dashHit = new Set<Enemy>();
+  /** 直前に残像を置いてから移動した距離の累積(px) */
+  private trailAccum = 0;
 
   // 金剛身
   kongoushinState: KongoushinState = 'ready';
@@ -133,6 +138,7 @@ export class AbilitySystem {
         this.jinIState = 'active';
         this.jinITimer = lv.duration;
         this.dashHit.clear();
+        this.trailAccum = 0;
         audio.dash();
         // 発動方向: 入力方向、なければ向いている方向
         if (p.moveX !== 0 || p.moveY !== 0) {
@@ -151,6 +157,7 @@ export class AbilitySystem {
       p.x += this.dashDirX * speed * dt;
       p.y += this.dashDirY * speed * dt;
       this.sweepSlash(prevX, prevY, p.x, p.y);
+      this.emitTrail(prevX, prevY, p.x, p.y);
       if (this.jinITimer <= 0) {
         this.jinIState = 'cooldown';
         this.jinITimer = lv.cooldown;
@@ -188,6 +195,24 @@ export class AbilitySystem {
         }
       }
     }
+  }
+
+  /**
+   * 迅移中の残像トレイル(docs/03 §8)。時間ベースだと Lv3(15.625倍速)で間隔がスカスカになるため、
+   * 移動線分上を距離ベースで一定間隔ごとにサンプリングして配置する(1フレームで複数個置くことがある)。
+   */
+  private emitTrail(x0: number, y0: number, x1: number, y1: number): void {
+    const segDist = Math.hypot(x1 - x0, y1 - y0);
+    if (segDist <= 0) return;
+    let remainStart = this.trailAccum;
+    let consumed = 0;
+    while (remainStart + (segDist - consumed) >= JINI_TRAIL_SPACING) {
+      consumed += JINI_TRAIL_SPACING - remainStart;
+      const t = consumed / segDist;
+      this.game.showJinITrail(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t);
+      remainStart = 0;
+    }
+    this.trailAccum = remainStart + (segDist - consumed);
   }
 
   // ── 八幡力 ──

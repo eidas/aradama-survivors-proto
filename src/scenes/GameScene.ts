@@ -16,9 +16,9 @@ import {
   ENEMY_POOL_PREALLOC,
   GEM_POOL_LIMIT,
 } from '../data/balance';
-import { ENEMIES } from '../data/enemies';
+import { ENEMIES, killsByTypeToBreakdown } from '../data/enemies';
 import { CentipedeController } from '../entities/Centipede';
-import { recordRun } from '../core/save';
+import { loadSave, recordRun } from '../core/save';
 import { audio } from '../core/audio';
 import { InputSystem } from '../systems/InputSystem';
 import { SpawnSystem } from '../systems/SpawnSystem';
@@ -28,6 +28,37 @@ import { PickupSystem } from '../systems/PickupSystem';
 import { AbilitySystem } from '../systems/AbilitySystem';
 import { Hud } from '../ui/Hud';
 import { GAME_WIDTH, GAME_HEIGHT, DEBUG } from '../config';
+
+interface DissolveVfx {
+  sprite: Phaser.GameObjects.Image;
+  life: number;
+  /** 開始時のスケール(敵ごとに半径が異なるため個体別に保持) */
+  baseScale: number;
+}
+
+/** 撃破ディゾルブの生存時間(秒)・同時表示上限 */
+const DISSOLVE_LIFETIME = 0.3;
+const DISSOLVE_LIMIT = 40;
+
+interface JinITrailVfx {
+  sprite: Phaser.GameObjects.Image;
+  life: number;
+}
+
+/** 迅移の残像トレイルの生存時間(秒)・同時表示上限(docs/03 §8) */
+const JINI_TRAIL_LIFETIME = 0.25;
+const JINI_TRAIL_LIMIT = 16;
+const JINI_TRAIL_ALPHA = 0.5;
+
+interface DamageNumberVfx {
+  text: Phaser.GameObjects.Text;
+  life: number;
+}
+
+/** ダメージ数字ポップの生存時間(秒)・上昇速度(px/s)・プール上限(docs/03 §8, docs/04 §5) */
+const DAMAGE_NUMBER_LIFETIME = 0.6;
+const DAMAGE_NUMBER_RISE_SPEED = 50;
+const DAMAGE_NUMBER_LIMIT = 200;
 
 /** ゲームプレイ本体。システムを固定順で更新する(docs/02 §3.2) */
 export class GameScene extends Phaser.Scene {
@@ -43,10 +74,17 @@ export class GameScene extends Phaser.Scene {
   /** 未消化のレベルアップ 3 択の数 */
   private pendingChoices = 0;
   private choosing = false;
+  /** レベルアップ3択の表示中か(PauseScene 起動判定用に公開) */
+  get isChoosing(): boolean {
+    return this.choosing;
+  }
 
   player!: Player;
   centipede: CentipedeController | null = null;
   private bossSpawned = false;
+  /** 出現中のボス(大型集合体)への参照。HUD のボス HP バー表示用(鉄則4: generation で世代照合) */
+  boss: Enemy | null = null;
+  bossGeneration = -1;
   /** デバッグ: 自動操縦(バランス計測ボット) */
   autopilot = false;
   /** デバッグ: 4 倍速シミュレーション */
@@ -66,6 +104,17 @@ export class GameScene extends Phaser.Scene {
   private hud!: Hud;
   private bg!: Phaser.GameObjects.TileSprite;
   private ended = false;
+  /** 撃破ディゾルブ用のプール(事前確保・ラウンドロビンで再利用) */
+  private dissolves: DissolveVfx[] = [];
+  private dissolveCursor = 0;
+  /** 迅移の残像トレイル用のプール(事前確保・ラウンドロビンで再利用) */
+  private jinITrails: JinITrailVfx[] = [];
+  private jinITrailCursor = 0;
+  /** ダメージ数字ポップの設定(既定 OFF)。毎ヒットで localStorage を読まないよう起動時に保持 */
+  damageNumbersEnabled = false;
+  /** ダメージ数字用のプール。OFF のままなら一度も確保しない(鉄則2: 追加コストほぼゼロ) */
+  private damageNumbers: DamageNumberVfx[] = [];
+  private damageNumberCursor = 0;
 
   constructor() {
     super('Game');
@@ -84,8 +133,13 @@ export class GameScene extends Phaser.Scene {
     this.ended = false;
     this.centipede = null;
     this.bossSpawned = false;
+    this.boss = null;
+    this.bossGeneration = -1;
     this.autopilot = false;
     this.fastForward = false;
+    this.damageNumbersEnabled = loadSave().settings.damageNumbers;
+    this.damageNumbers = [];
+    this.damageNumberCursor = 0;
 
     this.bg = this.add
       .tileSprite(0, 0, GAME_WIDTH, GAME_HEIGHT, 'bg-tile')
@@ -100,6 +154,27 @@ export class GameScene extends Phaser.Scene {
     this.projectiles = new ObjectPool(() => new Projectile(this), 30, 100);
     this.enemyHash = new SpatialHash<Enemy>(64);
     this.gemHash = new SpatialHash<Gem>(64);
+
+    this.dissolves = [];
+    for (let i = 0; i < DISSOLVE_LIMIT; i++) {
+      this.dissolves.push({
+        sprite: this.add.image(0, 0, 'enemy-insect').setDepth(4).setTint(0x604080).setVisible(false),
+        life: 0,
+        baseScale: 1,
+      });
+    }
+    this.dissolveCursor = 0;
+
+    this.jinITrails = [];
+    for (let i = 0; i < JINI_TRAIL_LIMIT; i++) {
+      this.jinITrails.push({
+        sprite: this.add.image(0, 0, 'player').setDepth(9).setTint(0x3050ff).setVisible(false),
+        life: 0,
+      });
+    }
+    this.jinITrailCursor = 0;
+
+    if (this.damageNumbersEnabled) this.ensureDamageNumberPool();
 
     this.inputSystem = new InputSystem(this);
     this.spawnSystem = new SpawnSystem(this);
@@ -146,6 +221,9 @@ export class GameScene extends Phaser.Scene {
     this.playerSystem.update(dt); // 移動・オート攻撃・斬撃波
     this.enemySystem.contact(); // 接触ダメージ
     this.pickupSystem.update(dt);
+    this.updateDissolves(dt);
+    this.updateJinITrails(dt);
+    this.updateDamageNumbers(dt);
     this.hud.update();
 
     this.bg.setTilePosition(this.cameras.main.scrollX, this.cameras.main.scrollY);
@@ -185,6 +263,8 @@ export class GameScene extends Phaser.Scene {
       this.player.y + Math.sin(angle) * 500,
       1, // ボスは時間スケーリングなし(HP 2500 固定)
     );
+    this.boss = slot;
+    this.bossGeneration = slot.generation;
     this.showBanner('大型荒魂 出現 — 討伐せよ');
     audio.bossRoar();
   }
@@ -205,6 +285,13 @@ export class GameScene extends Phaser.Scene {
       hold: 1900,
       onComplete: () => banner.destroy(),
     });
+  }
+
+  /** ESC で一時停止メニューを開く(LevelUp 表示中は呼び出し元で無視される) */
+  openPause(): void {
+    if (this.choosing || this.ended) return;
+    this.scene.launch('Pause');
+    this.scene.pause();
   }
 
   /** 未消化のレベルアップがあれば 3 択を開く(1 回分ずつ) */
@@ -283,26 +370,101 @@ export class GameScene extends Phaser.Scene {
     if (wasBoss) this.endRun(true);
   }
 
-  /** 撃破ディゾルブ: 黒い体が崩れてノロに戻る 0.3 秒の演出。同時数は抑制 */
-  private dissolveCount = 0;
+  /** 撃破ディゾルブ: 黒紫の残骸が崩れてノロに戻る 0.3 秒の演出。プール化(鉄則2: ラン中の new / GC を避ける) */
   private showDissolve(enemy: Enemy): void {
-    if (this.dissolveCount >= 40) return;
-    this.dissolveCount++;
-    const ghost = this.add
-      .image(enemy.x, enemy.y, enemy.def.textureKey)
-      .setDepth(4)
-      .setTint(0x604080)
-      .setScale(enemy.radius / enemy.def.radius);
-    this.tweens.add({
-      targets: ghost,
-      alpha: 0,
-      scale: ghost.scale * 0.6,
-      duration: 300,
-      onComplete: () => {
-        ghost.destroy();
-        this.dissolveCount--;
-      },
-    });
+    const v = this.dissolves[this.dissolveCursor];
+    this.dissolveCursor = (this.dissolveCursor + 1) % this.dissolves.length;
+    v.life = DISSOLVE_LIFETIME;
+    v.baseScale = enemy.radius / enemy.def.radius;
+    v.sprite
+      .setTexture(enemy.def.textureKey)
+      .setPosition(enemy.x, enemy.y)
+      .setScale(v.baseScale)
+      .setAlpha(1)
+      .setVisible(true);
+  }
+
+  /** ディゾルブ VFX の毎フレーム減衰(tween ではなく手動更新。PlayerSystem の斬撃VFXと同方式) */
+  private updateDissolves(dt: number): void {
+    for (const v of this.dissolves) {
+      if (v.life <= 0) continue;
+      v.life -= dt;
+      const t = Math.max(0, v.life / DISSOLVE_LIFETIME);
+      v.sprite.setAlpha(t).setScale(v.baseScale * (0.6 + 0.4 * t));
+      if (v.life <= 0) v.sprite.setVisible(false);
+    }
+  }
+
+  /**
+   * 迅移の残像トレイルを1個配置(プール化・ラウンドロビンで再利用、鉄則2)。
+   * AbilitySystem から移動距離ベースで一定間隔ごとに呼ばれる(docs/03 §8)。
+   */
+  showJinITrail(x: number, y: number): void {
+    const v = this.jinITrails[this.jinITrailCursor];
+    this.jinITrailCursor = (this.jinITrailCursor + 1) % this.jinITrails.length;
+    v.life = JINI_TRAIL_LIFETIME;
+    v.sprite.setPosition(x, y).setAlpha(JINI_TRAIL_ALPHA).setVisible(true);
+  }
+
+  /** 残像トレイルの毎フレーム減衰(tween ではなく手動更新。ディゾルブと同方式) */
+  private updateJinITrails(dt: number): void {
+    for (const v of this.jinITrails) {
+      if (v.life <= 0) continue;
+      v.life -= dt;
+      const t = Math.max(0, v.life / JINI_TRAIL_LIFETIME);
+      v.sprite.setAlpha(JINI_TRAIL_ALPHA * t);
+      if (v.life <= 0) v.sprite.setVisible(false);
+    }
+  }
+
+  /** N キーのトグルから呼ばれる。OFF→ON の初回のみプールを確保する */
+  setDamageNumbersEnabled(enabled: boolean): void {
+    this.damageNumbersEnabled = enabled;
+    if (enabled) this.ensureDamageNumberPool();
+  }
+
+  /** ダメージ数字プールの遅延確保(既定 OFF のランでは一度も呼ばれず追加コストゼロ) */
+  private ensureDamageNumberPool(): void {
+    if (this.damageNumbers.length > 0) return;
+    for (let i = 0; i < DAMAGE_NUMBER_LIMIT; i++) {
+      this.damageNumbers.push({
+        text: this.add
+          .text(0, 0, '', { fontSize: '16px', color: '#fff2a8', fontStyle: 'bold' })
+          .setOrigin(0.5)
+          .setDepth(20)
+          .setVisible(false),
+        life: 0,
+      });
+    }
+  }
+
+  /**
+   * 敵ヒット位置にダメージ数字をポップ表示(設定 ON 時のみ、docs/03 §8)。
+   * プール化・ラウンドロビンで再利用(ディゾルブ/トレイルと同方式、鉄則2)。
+   */
+  showDamageNumber(x: number, y: number, power: number): void {
+    if (!this.damageNumbersEnabled) return;
+    if (this.damageNumbers.length === 0) return; // プール未確保(トグル直後の取りこぼしは許容)
+    const v = this.damageNumbers[this.damageNumberCursor];
+    this.damageNumberCursor = (this.damageNumberCursor + 1) % this.damageNumbers.length;
+    v.life = DAMAGE_NUMBER_LIFETIME;
+    v.text
+      .setText(String(Math.round(power)))
+      .setPosition(x, y)
+      .setAlpha(1)
+      .setVisible(true);
+  }
+
+  /** ダメージ数字の毎フレーム更新: 上に流れながらフェード(tween 不使用、ディゾルブと同方式) */
+  private updateDamageNumbers(dt: number): void {
+    if (this.damageNumbers.length === 0) return; // OFF のまま一度も生成していなければ即 return(鉄則2)
+    for (const v of this.damageNumbers) {
+      if (v.life <= 0) continue;
+      v.life -= dt;
+      v.text.y -= DAMAGE_NUMBER_RISE_SPEED * dt;
+      v.text.setAlpha(Math.max(0, v.life / DAMAGE_NUMBER_LIFETIME));
+      if (v.life <= 0) v.text.setVisible(false);
+    }
   }
 
   /** 中ボス撃破ボーナス: 強化ピック 1 回(docs/03 §5.1) */
@@ -331,10 +493,12 @@ export class GameScene extends Phaser.Scene {
     const build = UPGRADES.filter((u) => (this.takes[u.id] ?? 0) > 0).map(
       (u) => `${u.nameJa}${(this.takes[u.id] ?? 0) > 1 ? ` ×${this.takes[u.id]}` : ''}`,
     );
+    const killBreakdown = killsByTypeToBreakdown(this.killsByType);
     this.scene.start('Result', {
       ...record,
       characterName: this.player.def.name,
       build,
+      killBreakdown,
       bestUpdated,
     });
   }

@@ -4,6 +4,7 @@ import { TitleScene } from './scenes/TitleScene';
 import { CharacterSelectScene } from './scenes/CharacterSelectScene';
 import { GameScene } from './scenes/GameScene';
 import { LevelUpScene } from './scenes/LevelUpScene';
+import { PauseScene } from './scenes/PauseScene';
 import { ResultScene } from './scenes/ResultScene';
 import { GAME_WIDTH, GAME_HEIGHT } from './config';
 
@@ -17,5 +18,5 @@ new Phaser.Game({
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [BootScene, TitleScene, CharacterSelectScene, GameScene, LevelUpScene, ResultScene],
+  scene: [BootScene, TitleScene, CharacterSelectScene, GameScene, LevelUpScene, PauseScene, ResultScene],
 });
