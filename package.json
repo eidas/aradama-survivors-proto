@@ -8,12 +8,14 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "verify": "node scripts/verify.mjs"
   },
   "dependencies": {
     "phaser": "^3.80.1"
   },
   "devDependencies": {
+    "playwright-core": "^1.61.1",
     "typescript": "^5.5.4",
     "vite": "^5.4.0",
     "vitest": "^2.0.5"
