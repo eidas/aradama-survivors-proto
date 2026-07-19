@@ -6,13 +6,9 @@
 
 ## MUST
 
-### P1 | DOING | 撃破ディゾルブのプール化
-GameScene.showDissolve の都度 add.image + tween をエフェクトプールに置き換える。
-- 受け入れ: 見た目が現状同等 / ラン中の new が発生しない / verify のスモークfpsが悪化しない
-
 ## SHOULD
 
-### B1 | TODO | 迅移の残像トレイル
+### B1 | DOING | 迅移の残像トレイル
 迅移中、プレイヤーの残像(フェードするゴースト)を残す。docs/03 §8 の演出ガイド準拠。
 - 受け入れ: 迅移中のみ表示 / プール管理 / Lv3の速度でも視認できる
 
@@ -56,6 +52,9 @@ EnemySystem 内のボス処理(updateBoss/bossSpit/bossAbsorb)を独立モジュ
 
 ### A1 | DONE | リザルトに敵タイプ別撃破数
 コミット 7546c79。verify PASS(テスト47件に増加)。Reviewer APPROVE(blocking 0)
+
+### P1 | DONE | 撃破ディゾルブのプール化
+コミット c517e89。verify PASS(fps 51→38、悪化なし)。Reviewer APPROVE(blocking 0)
 
 ---
 Gate 4 記録(3タスク時点): verify 約30秒(<5分 ✓)/ テスト 43→47件(増加 ✓)/ 直近6コミットに revert なし ✓
