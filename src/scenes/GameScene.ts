@@ -18,7 +18,7 @@ import {
 } from '../data/balance';
 import { ENEMIES, killsByTypeToBreakdown } from '../data/enemies';
 import { CentipedeController } from '../entities/Centipede';
-import { recordRun } from '../core/save';
+import { loadSave, recordRun } from '../core/save';
 import { audio } from '../core/audio';
 import { InputSystem } from '../systems/InputSystem';
 import { SpawnSystem } from '../systems/SpawnSystem';
@@ -49,6 +49,16 @@ interface JinITrailVfx {
 const JINI_TRAIL_LIFETIME = 0.25;
 const JINI_TRAIL_LIMIT = 16;
 const JINI_TRAIL_ALPHA = 0.5;
+
+interface DamageNumberVfx {
+  text: Phaser.GameObjects.Text;
+  life: number;
+}
+
+/** ダメージ数字ポップの生存時間(秒)・上昇速度(px/s)・プール上限(docs/03 §8, docs/04 §5) */
+const DAMAGE_NUMBER_LIFETIME = 0.6;
+const DAMAGE_NUMBER_RISE_SPEED = 50;
+const DAMAGE_NUMBER_LIMIT = 200;
 
 /** ゲームプレイ本体。システムを固定順で更新する(docs/02 §3.2) */
 export class GameScene extends Phaser.Scene {
@@ -100,6 +110,11 @@ export class GameScene extends Phaser.Scene {
   /** 迅移の残像トレイル用のプール(事前確保・ラウンドロビンで再利用) */
   private jinITrails: JinITrailVfx[] = [];
   private jinITrailCursor = 0;
+  /** ダメージ数字ポップの設定(既定 OFF)。毎ヒットで localStorage を読まないよう起動時に保持 */
+  damageNumbersEnabled = false;
+  /** ダメージ数字用のプール。OFF のままなら一度も確保しない(鉄則2: 追加コストほぼゼロ) */
+  private damageNumbers: DamageNumberVfx[] = [];
+  private damageNumberCursor = 0;
 
   constructor() {
     super('Game');
@@ -122,6 +137,9 @@ export class GameScene extends Phaser.Scene {
     this.bossGeneration = -1;
     this.autopilot = false;
     this.fastForward = false;
+    this.damageNumbersEnabled = loadSave().settings.damageNumbers;
+    this.damageNumbers = [];
+    this.damageNumberCursor = 0;
 
     this.bg = this.add
       .tileSprite(0, 0, GAME_WIDTH, GAME_HEIGHT, 'bg-tile')
@@ -155,6 +173,8 @@ export class GameScene extends Phaser.Scene {
       });
     }
     this.jinITrailCursor = 0;
+
+    if (this.damageNumbersEnabled) this.ensureDamageNumberPool();
 
     this.inputSystem = new InputSystem(this);
     this.spawnSystem = new SpawnSystem(this);
@@ -203,6 +223,7 @@ export class GameScene extends Phaser.Scene {
     this.pickupSystem.update(dt);
     this.updateDissolves(dt);
     this.updateJinITrails(dt);
+    this.updateDamageNumbers(dt);
     this.hud.update();
 
     this.bg.setTilePosition(this.cameras.main.scrollX, this.cameras.main.scrollY);
@@ -393,6 +414,56 @@ export class GameScene extends Phaser.Scene {
       const t = Math.max(0, v.life / JINI_TRAIL_LIFETIME);
       v.sprite.setAlpha(JINI_TRAIL_ALPHA * t);
       if (v.life <= 0) v.sprite.setVisible(false);
+    }
+  }
+
+  /** N キーのトグルから呼ばれる。OFF→ON の初回のみプールを確保する */
+  setDamageNumbersEnabled(enabled: boolean): void {
+    this.damageNumbersEnabled = enabled;
+    if (enabled) this.ensureDamageNumberPool();
+  }
+
+  /** ダメージ数字プールの遅延確保(既定 OFF のランでは一度も呼ばれず追加コストゼロ) */
+  private ensureDamageNumberPool(): void {
+    if (this.damageNumbers.length > 0) return;
+    for (let i = 0; i < DAMAGE_NUMBER_LIMIT; i++) {
+      this.damageNumbers.push({
+        text: this.add
+          .text(0, 0, '', { fontSize: '16px', color: '#fff2a8', fontStyle: 'bold' })
+          .setOrigin(0.5)
+          .setDepth(20)
+          .setVisible(false),
+        life: 0,
+      });
+    }
+  }
+
+  /**
+   * 敵ヒット位置にダメージ数字をポップ表示(設定 ON 時のみ、docs/03 §8)。
+   * プール化・ラウンドロビンで再利用(ディゾルブ/トレイルと同方式、鉄則2)。
+   */
+  showDamageNumber(x: number, y: number, power: number): void {
+    if (!this.damageNumbersEnabled) return;
+    if (this.damageNumbers.length === 0) return; // プール未確保(トグル直後の取りこぼしは許容)
+    const v = this.damageNumbers[this.damageNumberCursor];
+    this.damageNumberCursor = (this.damageNumberCursor + 1) % this.damageNumbers.length;
+    v.life = DAMAGE_NUMBER_LIFETIME;
+    v.text
+      .setText(String(Math.round(power)))
+      .setPosition(x, y)
+      .setAlpha(1)
+      .setVisible(true);
+  }
+
+  /** ダメージ数字の毎フレーム更新: 上に流れながらフェード(tween 不使用、ディゾルブと同方式) */
+  private updateDamageNumbers(dt: number): void {
+    if (this.damageNumbers.length === 0) return; // OFF のまま一度も生成していなければ即 return(鉄則2)
+    for (const v of this.damageNumbers) {
+      if (v.life <= 0) continue;
+      v.life -= dt;
+      v.text.y -= DAMAGE_NUMBER_RISE_SPEED * dt;
+      v.text.setAlpha(Math.max(0, v.life / DAMAGE_NUMBER_LIFETIME));
+      if (v.life <= 0) v.text.setVisible(false);
     }
   }
 

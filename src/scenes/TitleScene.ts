@@ -24,10 +24,17 @@ export class TitleScene extends Phaser.Scene {
       .setOrigin(0.5);
     this.tweens.add({ targets: prompt, alpha: 0.3, duration: 700, yoyo: true, repeat: -1 });
     this.add
-      .text(cx, GAME_HEIGHT * 0.88, '移動: WASD/矢印  攻撃: オート  迅移: Shift  金剛身: E/右クリック長押し  八幡力: Space長押し  M: ミュート', {
-        fontSize: '16px',
-        color: '#8888aa',
-      })
+      .text(
+        cx,
+        GAME_HEIGHT * 0.88,
+        '移動: WASD/矢印  攻撃: オート  迅移: Shift  金剛身: E/右クリック長押し  八幡力: Space長押し  M: ミュート  N: ダメージ数字',
+        {
+          fontSize: '16px',
+          color: '#8888aa',
+          align: 'center',
+          wordWrap: { width: GAME_WIDTH - 80, useAdvancedWrap: true },
+        },
+      )
       .setOrigin(0.5);
 
     const start = () => {

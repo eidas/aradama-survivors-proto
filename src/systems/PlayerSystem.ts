@@ -207,6 +207,7 @@ export class PlayerSystem {
     e.hp -= power;
     e.lastHitAt = g.runTime;
     e.flashTimer = 0.06;
+    g.showDamageNumber(e.x, e.y, power);
     if (e.hp <= 0) g.killEnemy(e);
   }
 

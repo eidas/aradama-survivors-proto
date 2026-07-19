@@ -13,10 +13,12 @@ export interface SaveData {
   best: BestRecord | null;
   settings: {
     muted: boolean;
+    /** 敵ヒット時のダメージ数字ポップ表示(docs/03 §8: 情報量が多いため既定 OFF) */
+    damageNumbers: boolean;
   };
 }
 
-const DEFAULTS: SaveData = { best: null, settings: { muted: false } };
+const DEFAULTS: SaveData = { best: null, settings: { muted: false, damageNumbers: false } };
 
 /** 新しいランがベスト記録を上回るか。勝利 > 生存時間 の優先順で比較する */
 export function isBetterRun(candidate: BestRecord, best: BestRecord | null): boolean {
