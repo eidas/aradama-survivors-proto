@@ -43,6 +43,10 @@ export class GameScene extends Phaser.Scene {
   /** 未消化のレベルアップ 3 択の数 */
   private pendingChoices = 0;
   private choosing = false;
+  /** レベルアップ3択の表示中か(PauseScene 起動判定用に公開) */
+  get isChoosing(): boolean {
+    return this.choosing;
+  }
 
   player!: Player;
   centipede: CentipedeController | null = null;
@@ -212,6 +216,13 @@ export class GameScene extends Phaser.Scene {
       hold: 1900,
       onComplete: () => banner.destroy(),
     });
+  }
+
+  /** ESC で一時停止メニューを開く(LevelUp 表示中は呼び出し元で無視される) */
+  openPause(): void {
+    if (this.choosing || this.ended) return;
+    this.scene.launch('Pause');
+    this.scene.pause();
   }
 
   /** 未消化のレベルアップがあれば 3 択を開く(1 回分ずつ) */

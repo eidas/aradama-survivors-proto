@@ -23,6 +23,7 @@ export class InputSystem {
     guard: Phaser.Input.Keyboard.Key;
     charge: Phaser.Input.Keyboard.Key;
     mute: Phaser.Input.Keyboard.Key;
+    pause: Phaser.Input.Keyboard.Key;
   };
   private debugKeys?: {
     stress: Phaser.Input.Keyboard.Key;
@@ -47,6 +48,7 @@ export class InputSystem {
       guard: kb.addKey('E'),
       charge: kb.addKey('SPACE'),
       mute: kb.addKey('M'),
+      pause: kb.addKey('ESC'),
     };
     game.input.mouse?.disableContextMenu(); // 右クリック=金剛身のため
     if (DEBUG) {
@@ -78,6 +80,11 @@ export class InputSystem {
     if (Phaser.Input.Keyboard.JustDown(k.mute)) {
       const settings = updateSettings({ muted: !audio.muted });
       audio.setMuted(settings.muted);
+    }
+    // レベルアップ3択の表示中は Game が pause され update 自体が呼ばれないため二重起動しない
+    if (!this.game.isChoosing && Phaser.Input.Keyboard.JustDown(k.pause)) {
+      this.game.openPause();
+      return;
     }
 
     if (this.game.autopilot) {
