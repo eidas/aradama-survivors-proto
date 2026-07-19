@@ -40,6 +40,16 @@ interface DissolveVfx {
 const DISSOLVE_LIFETIME = 0.3;
 const DISSOLVE_LIMIT = 40;
 
+interface JinITrailVfx {
+  sprite: Phaser.GameObjects.Image;
+  life: number;
+}
+
+/** 迅移の残像トレイルの生存時間(秒)・同時表示上限(docs/03 §8) */
+const JINI_TRAIL_LIFETIME = 0.25;
+const JINI_TRAIL_LIMIT = 16;
+const JINI_TRAIL_ALPHA = 0.5;
+
 /** ゲームプレイ本体。システムを固定順で更新する(docs/02 §3.2) */
 export class GameScene extends Phaser.Scene {
   rng!: Rng;
@@ -87,6 +97,9 @@ export class GameScene extends Phaser.Scene {
   /** 撃破ディゾルブ用のプール(事前確保・ラウンドロビンで再利用) */
   private dissolves: DissolveVfx[] = [];
   private dissolveCursor = 0;
+  /** 迅移の残像トレイル用のプール(事前確保・ラウンドロビンで再利用) */
+  private jinITrails: JinITrailVfx[] = [];
+  private jinITrailCursor = 0;
 
   constructor() {
     super('Game');
@@ -134,6 +147,15 @@ export class GameScene extends Phaser.Scene {
     }
     this.dissolveCursor = 0;
 
+    this.jinITrails = [];
+    for (let i = 0; i < JINI_TRAIL_LIMIT; i++) {
+      this.jinITrails.push({
+        sprite: this.add.image(0, 0, 'player').setDepth(9).setTint(0x3050ff).setVisible(false),
+        life: 0,
+      });
+    }
+    this.jinITrailCursor = 0;
+
     this.inputSystem = new InputSystem(this);
     this.spawnSystem = new SpawnSystem(this);
     this.enemySystem = new EnemySystem(this);
@@ -180,6 +202,7 @@ export class GameScene extends Phaser.Scene {
     this.enemySystem.contact(); // 接触ダメージ
     this.pickupSystem.update(dt);
     this.updateDissolves(dt);
+    this.updateJinITrails(dt);
     this.hud.update();
 
     this.bg.setTilePosition(this.cameras.main.scrollX, this.cameras.main.scrollY);
@@ -347,6 +370,28 @@ export class GameScene extends Phaser.Scene {
       v.life -= dt;
       const t = Math.max(0, v.life / DISSOLVE_LIFETIME);
       v.sprite.setAlpha(t).setScale(v.baseScale * (0.6 + 0.4 * t));
+      if (v.life <= 0) v.sprite.setVisible(false);
+    }
+  }
+
+  /**
+   * 迅移の残像トレイルを1個配置(プール化・ラウンドロビンで再利用、鉄則2)。
+   * AbilitySystem から移動距離ベースで一定間隔ごとに呼ばれる(docs/03 §8)。
+   */
+  showJinITrail(x: number, y: number): void {
+    const v = this.jinITrails[this.jinITrailCursor];
+    this.jinITrailCursor = (this.jinITrailCursor + 1) % this.jinITrails.length;
+    v.life = JINI_TRAIL_LIFETIME;
+    v.sprite.setPosition(x, y).setAlpha(JINI_TRAIL_ALPHA).setVisible(true);
+  }
+
+  /** 残像トレイルの毎フレーム減衰(tween ではなく手動更新。ディゾルブと同方式) */
+  private updateJinITrails(dt: number): void {
+    for (const v of this.jinITrails) {
+      if (v.life <= 0) continue;
+      v.life -= dt;
+      const t = Math.max(0, v.life / JINI_TRAIL_LIFETIME);
+      v.sprite.setAlpha(JINI_TRAIL_ALPHA * t);
       if (v.life <= 0) v.sprite.setVisible(false);
     }
   }
