@@ -47,6 +47,9 @@ export class GameScene extends Phaser.Scene {
   player!: Player;
   centipede: CentipedeController | null = null;
   private bossSpawned = false;
+  /** 出現中のボス(大型集合体)への参照。HUD のボス HP バー表示用(鉄則4: generation で世代照合) */
+  boss: Enemy | null = null;
+  bossGeneration = -1;
   /** デバッグ: 自動操縦(バランス計測ボット) */
   autopilot = false;
   /** デバッグ: 4 倍速シミュレーション */
@@ -84,6 +87,8 @@ export class GameScene extends Phaser.Scene {
     this.ended = false;
     this.centipede = null;
     this.bossSpawned = false;
+    this.boss = null;
+    this.bossGeneration = -1;
     this.autopilot = false;
     this.fastForward = false;
 
@@ -185,6 +190,8 @@ export class GameScene extends Phaser.Scene {
       this.player.y + Math.sin(angle) * 500,
       1, // ボスは時間スケーリングなし(HP 2500 固定)
     );
+    this.boss = slot;
+    this.bossGeneration = slot.generation;
     this.showBanner('大型荒魂 出現 — 討伐せよ');
     audio.bossRoar();
   }

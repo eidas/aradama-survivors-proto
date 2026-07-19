@@ -18,6 +18,10 @@ export class Hud {
   private kongouFill: Phaser.GameObjects.Rectangle;
   private chargeText: Phaser.GameObjects.Text;
   private debugText?: Phaser.GameObjects.Text;
+  private bossBg: Phaser.GameObjects.Rectangle;
+  private bossFill: Phaser.GameObjects.Rectangle;
+  private bossNameText: Phaser.GameObjects.Text;
+  private readonly bossBarWidth = 600;
 
   constructor(private game: GameScene) {
     const add = game.add;
@@ -37,6 +41,23 @@ export class Hud {
     );
     this.timerText = fix(
       add.text(GAME_WIDTH / 2, 30, '00:00', { fontSize: '22px', color: '#ffffff' }).setOrigin(0.5, 0),
+    );
+
+    // ボス HP バー(出現中のみ表示。生成済みを setVisible で切り替える)
+    const bossW = this.bossBarWidth;
+    const bossX = GAME_WIDTH / 2 - bossW / 2;
+    const bossY = 52;
+    this.bossNameText = fix(
+      add
+        .text(GAME_WIDTH / 2, bossY - 20, '大型荒魂', { fontSize: '16px', color: '#ff6060' })
+        .setOrigin(0.5, 0)
+        .setVisible(false),
+    );
+    this.bossBg = fix(
+      add.rectangle(bossX, bossY, bossW, BAR_H, 0x1a1a2e).setOrigin(0, 0).setVisible(false),
+    );
+    this.bossFill = fix(
+      add.rectangle(bossX, bossY, bossW, BAR_H, 0xe02020).setOrigin(0, 0).setVisible(false),
     );
 
     // 下部: 写しバー / HP バー / 撃破数
@@ -83,6 +104,17 @@ export class Hud {
     this.utsushiFill.width = 220 * (h.utsushi / h.utsushiMax);
     this.hpFill.width = 220 * (h.hp / h.maxHp);
     this.killsText.setText(`撃破: ${g.kills}`);
+
+    // ボス HP バー: 出現中(プール再利用による世代ズレを除外)のみ表示・追従
+    const boss = g.boss;
+    const bossAlive =
+      !!boss && boss.active && boss.generation === g.bossGeneration && boss.def.id === 'amalgam';
+    this.bossNameText.setVisible(bossAlive);
+    this.bossBg.setVisible(bossAlive);
+    this.bossFill.setVisible(bossAlive);
+    if (bossAlive && boss) {
+      this.bossFill.width = this.bossBarWidth * Math.max(0, Math.min(1, boss.hp / boss.maxHp));
+    }
 
     const ab = g.abilitySystem;
     this.jinIFill.width = 90 * ab.jinIReadyRatio;
