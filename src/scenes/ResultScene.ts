@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../config';
 import { loadSave } from '../core/save';
+import type { KillBreakdownEntry } from '../data/enemies';
 
 export interface RunResult {
   victory: boolean;
@@ -9,6 +10,7 @@ export interface RunResult {
   level: number;
   characterName: string;
   build: string[];
+  killBreakdown: KillBreakdownEntry[];
   bestUpdated: boolean;
 }
 
@@ -43,6 +45,19 @@ export class ResultScene extends Phaser.Scene {
         { fontSize: '24px', color: '#f0f4ff', align: 'left', lineSpacing: 10 },
       )
       .setOrigin(0.5, 0);
+
+    // 敵タイプ別の撃破内訳(0件は除外済み)。右側のベスト表示と対称に左側へ配置し、
+    // 中央の統計ブロック・下部の最終ビルドと重ならないよう右揃えで伸ばす。
+    if (data.killBreakdown.length > 0) {
+      this.add
+        .text(
+          cx - 280,
+          GAME_HEIGHT * 0.30,
+          ['撃破内訳', ...data.killBreakdown.map((k) => `${k.nameJa}  ${k.count}`)].join('\n'),
+          { fontSize: '16px', color: '#8888aa', align: 'right', lineSpacing: 6 },
+        )
+        .setOrigin(1, 0);
+    }
 
     if (data.bestUpdated) {
       this.add

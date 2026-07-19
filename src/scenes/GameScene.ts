@@ -16,7 +16,7 @@ import {
   ENEMY_POOL_PREALLOC,
   GEM_POOL_LIMIT,
 } from '../data/balance';
-import { ENEMIES } from '../data/enemies';
+import { ENEMIES, killsByTypeToBreakdown } from '../data/enemies';
 import { CentipedeController } from '../entities/Centipede';
 import { recordRun } from '../core/save';
 import { audio } from '../core/audio';
@@ -349,10 +349,12 @@ export class GameScene extends Phaser.Scene {
     const build = UPGRADES.filter((u) => (this.takes[u.id] ?? 0) > 0).map(
       (u) => `${u.nameJa}${(this.takes[u.id] ?? 0) > 1 ? ` ×${this.takes[u.id]}` : ''}`,
     );
+    const killBreakdown = killsByTypeToBreakdown(this.killsByType);
     this.scene.start('Result', {
       ...record,
       characterName: this.player.def.name,
       build,
+      killBreakdown,
       bestUpdated,
     });
   }
