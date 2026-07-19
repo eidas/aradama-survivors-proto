@@ -8,11 +8,7 @@
 
 ## SHOULD
 
-### B1 | DOING | 迅移の残像トレイル
-迅移中、プレイヤーの残像(フェードするゴースト)を残す。docs/03 §8 の演出ガイド準拠。
-- 受け入れ: 迅移中のみ表示 / プール管理 / Lv3の速度でも視認できる
-
-### A3 | TODO | ダメージ数字表示オプション
+### A3 | DOING | ダメージ数字表示オプション
 設定(セーブ)にダメージ数字ON/OFFを追加(既定OFF)。ONで敵ヒット時に数字をポップ表示。
 - 受け入れ: docs/03 §8 準拠(既定OFF)/ プール管理・上限200 / Nキーでトグル
 
@@ -40,6 +36,7 @@ EnemySystem 内のボス処理(updateBoss/bossSpit/bossAbsorb)を独立モジュ
 - PauseScene の restart/toTitle の冗長な scene.stop() 整理、InputSystem の到達不能な isChoosing ガード整理(A2レビューより)
 - docs/03 §7 リザルト仕様に「敵タイプ別内訳」を追記(A1レビューより)
 - リザルトの左右ブロック配置のレイアウトヘルパー化(A1レビューより)
+- 迅移トレイルのプール16は Lv3+健脚ビルドでギリギリ。emitTrail の距離補間を src/core に切り出してテスト化も検討(B1レビューより)
 
 ## DONE
 
@@ -55,6 +52,9 @@ EnemySystem 内のボス処理(updateBoss/bossSpit/bossAbsorb)を独立モジュ
 
 ### P1 | DONE | 撃破ディゾルブのプール化
 コミット c517e89。verify PASS(fps 51→38、悪化なし)。Reviewer APPROVE(blocking 0)
+
+### B1 | DONE | 迅移の残像トレイル
+コミット ee3af4b。verify PASS(fps同水準)。Reviewer APPROVE(blocking 0、境界条件トレース済み)
 
 ---
 Gate 4 記録(3タスク時点): verify 約30秒(<5分 ✓)/ テスト 43→47件(増加 ✓)/ 直近6コミットに revert なし ✓
