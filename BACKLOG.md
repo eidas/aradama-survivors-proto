@@ -8,11 +8,7 @@
 
 ## SHOULD
 
-### A3 | DOING | ダメージ数字表示オプション
-設定(セーブ)にダメージ数字ON/OFFを追加(既定OFF)。ONで敵ヒット時に数字をポップ表示。
-- 受け入れ: docs/03 §8 準拠(既定OFF)/ プール管理・上限200 / Nキーでトグル
-
-### Q1 | TODO | ボスAIの分離リファクタ
+### Q1 | DOING | ボスAIの分離リファクタ
 EnemySystem 内のボス処理(updateBoss/bossSpit/bossAbsorb)を独立モジュールへ分離する。
 - 受け入れ: 挙動不変(テスト・スモーク通過)/ EnemySystem の行数削減
 
@@ -37,6 +33,7 @@ EnemySystem 内のボス処理(updateBoss/bossSpit/bossAbsorb)を独立モジュ
 - docs/03 §7 リザルト仕様に「敵タイプ別内訳」を追記(A1レビューより)
 - リザルトの左右ブロック配置のレイアウトヘルパー化(A1レビューより)
 - 迅移トレイルのプール16は Lv3+健脚ビルドでギリギリ。emitTrail の距離補間を src/core に切り出してテスト化も検討(B1レビューより)
+- ダメージ数字 OFF 切替時に表示中ポップを即時消去する厳密化、docs/04 §5 プール表の記載を実装(遅延確保200)に合わせる(A3レビューより)
 
 ## DONE
 
@@ -56,5 +53,9 @@ EnemySystem 内のボス処理(updateBoss/bossSpit/bossAbsorb)を独立モジュ
 ### B1 | DONE | 迅移の残像トレイル
 コミット ee3af4b。verify PASS(fps同水準)。Reviewer APPROVE(blocking 0、境界条件トレース済み)
 
+### A3 | DONE | ダメージ数字表示オプション
+コミット 79eb1ee。verify PASS(OFF時fps同水準)。Reviewer APPROVE(blocking 0)
+
 ---
 Gate 4 記録(3タスク時点): verify 約30秒(<5分 ✓)/ テスト 43→47件(増加 ✓)/ 直近6コミットに revert なし ✓
+Gate 4 記録(6タスク時点): verify 約30秒(<5分 ✓)/ テスト 47件維持(A3はUI中心、減少なし ✓)/ revert なし ✓ / 6連続 APPROVE
