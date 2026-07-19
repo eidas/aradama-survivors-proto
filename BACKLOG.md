@@ -6,11 +6,7 @@
 
 ## MUST
 
-### A1 | DOING | リザルトに敵タイプ別撃破数
-リザルト画面に敵タイプごとの撃破数(蟲/鳥/鹿/熊/百足/ボス)を表示する。
-- 受け入れ: killsByType の内訳が日本語名で表示される / 0体のタイプは省略
-
-### P1 | TODO | 撃破ディゾルブのプール化
+### P1 | DOING | 撃破ディゾルブのプール化
 GameScene.showDissolve の都度 add.image + tween をエフェクトプールに置き換える。
 - 受け入れ: 見た目が現状同等 / ラン中の new が発生しない / verify のスモークfpsが悪化しない
 
@@ -46,6 +42,8 @@ EnemySystem 内のボス処理(updateBoss/bossSpit/bossAbsorb)を独立モジュ
 - ボス撃破時に `GameScene.boss = null` の明示リセット(B2レビューより)
 - ポーズ中の BGM 減衰またはミュート(A2レビューより)
 - PauseScene の restart/toTitle の冗長な scene.stop() 整理、InputSystem の到達不能な isChoosing ガード整理(A2レビューより)
+- docs/03 §7 リザルト仕様に「敵タイプ別内訳」を追記(A1レビューより)
+- リザルトの左右ブロック配置のレイアウトヘルパー化(A1レビューより)
 
 ## DONE
 
@@ -55,3 +53,9 @@ EnemySystem 内のボス処理(updateBoss/bossSpit/bossAbsorb)を独立モジュ
 ### A2 | DONE | ポーズメニュー(ESC)
 コミット 32964dd。verify PASS(スモーク: 撃破39/fps51→38)。Reviewer APPROVE(blocking 0)。
 既知の制約: ポーズ中は M キー等の入力不可(仕様許容)
+
+### A1 | DONE | リザルトに敵タイプ別撃破数
+コミット 7546c79。verify PASS(テスト47件に増加)。Reviewer APPROVE(blocking 0)
+
+---
+Gate 4 記録(3タスク時点): verify 約30秒(<5分 ✓)/ テスト 43→47件(増加 ✓)/ 直近6コミットに revert なし ✓
