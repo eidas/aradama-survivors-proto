@@ -29,6 +29,17 @@ import { AbilitySystem } from '../systems/AbilitySystem';
 import { Hud } from '../ui/Hud';
 import { GAME_WIDTH, GAME_HEIGHT, DEBUG } from '../config';
 
+interface DissolveVfx {
+  sprite: Phaser.GameObjects.Image;
+  life: number;
+  /** 開始時のスケール(敵ごとに半径が異なるため個体別に保持) */
+  baseScale: number;
+}
+
+/** 撃破ディゾルブの生存時間(秒)・同時表示上限 */
+const DISSOLVE_LIFETIME = 0.3;
+const DISSOLVE_LIMIT = 40;
+
 /** ゲームプレイ本体。システムを固定順で更新する(docs/02 §3.2) */
 export class GameScene extends Phaser.Scene {
   rng!: Rng;
@@ -73,6 +84,9 @@ export class GameScene extends Phaser.Scene {
   private hud!: Hud;
   private bg!: Phaser.GameObjects.TileSprite;
   private ended = false;
+  /** 撃破ディゾルブ用のプール(事前確保・ラウンドロビンで再利用) */
+  private dissolves: DissolveVfx[] = [];
+  private dissolveCursor = 0;
 
   constructor() {
     super('Game');
@@ -109,6 +123,16 @@ export class GameScene extends Phaser.Scene {
     this.projectiles = new ObjectPool(() => new Projectile(this), 30, 100);
     this.enemyHash = new SpatialHash<Enemy>(64);
     this.gemHash = new SpatialHash<Gem>(64);
+
+    this.dissolves = [];
+    for (let i = 0; i < DISSOLVE_LIMIT; i++) {
+      this.dissolves.push({
+        sprite: this.add.image(0, 0, 'enemy-insect').setDepth(4).setTint(0x604080).setVisible(false),
+        life: 0,
+        baseScale: 1,
+      });
+    }
+    this.dissolveCursor = 0;
 
     this.inputSystem = new InputSystem(this);
     this.spawnSystem = new SpawnSystem(this);
@@ -155,6 +179,7 @@ export class GameScene extends Phaser.Scene {
     this.playerSystem.update(dt); // 移動・オート攻撃・斬撃波
     this.enemySystem.contact(); // 接触ダメージ
     this.pickupSystem.update(dt);
+    this.updateDissolves(dt);
     this.hud.update();
 
     this.bg.setTilePosition(this.cameras.main.scrollX, this.cameras.main.scrollY);
@@ -301,26 +326,29 @@ export class GameScene extends Phaser.Scene {
     if (wasBoss) this.endRun(true);
   }
 
-  /** 撃破ディゾルブ: 黒い体が崩れてノロに戻る 0.3 秒の演出。同時数は抑制 */
-  private dissolveCount = 0;
+  /** 撃破ディゾルブ: 黒紫の残骸が崩れてノロに戻る 0.3 秒の演出。プール化(鉄則2: ラン中の new / GC を避ける) */
   private showDissolve(enemy: Enemy): void {
-    if (this.dissolveCount >= 40) return;
-    this.dissolveCount++;
-    const ghost = this.add
-      .image(enemy.x, enemy.y, enemy.def.textureKey)
-      .setDepth(4)
-      .setTint(0x604080)
-      .setScale(enemy.radius / enemy.def.radius);
-    this.tweens.add({
-      targets: ghost,
-      alpha: 0,
-      scale: ghost.scale * 0.6,
-      duration: 300,
-      onComplete: () => {
-        ghost.destroy();
-        this.dissolveCount--;
-      },
-    });
+    const v = this.dissolves[this.dissolveCursor];
+    this.dissolveCursor = (this.dissolveCursor + 1) % this.dissolves.length;
+    v.life = DISSOLVE_LIFETIME;
+    v.baseScale = enemy.radius / enemy.def.radius;
+    v.sprite
+      .setTexture(enemy.def.textureKey)
+      .setPosition(enemy.x, enemy.y)
+      .setScale(v.baseScale)
+      .setAlpha(1)
+      .setVisible(true);
+  }
+
+  /** ディゾルブ VFX の毎フレーム減衰(tween ではなく手動更新。PlayerSystem の斬撃VFXと同方式) */
+  private updateDissolves(dt: number): void {
+    for (const v of this.dissolves) {
+      if (v.life <= 0) continue;
+      v.life -= dt;
+      const t = Math.max(0, v.life / DISSOLVE_LIFETIME);
+      v.sprite.setAlpha(t).setScale(v.baseScale * (0.6 + 0.4 * t));
+      if (v.life <= 0) v.sprite.setVisible(false);
+    }
   }
 
   /** 中ボス撃破ボーナス: 強化ピック 1 回(docs/03 §5.1) */
