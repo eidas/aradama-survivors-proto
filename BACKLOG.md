@@ -8,18 +8,7 @@
 
 ## SHOULD
 
-### C1 | DOING | 品質バッチ: レビュー指摘のコード改善
-蓄積した non-blocking 指摘のうちコード系をまとめて解消する。**挙動変更なし(リファクタ+防御+テスト)**。
-- 受け入れ:
-  - 敵IDリテラル比較('amalgam' 等)を定数または EnemyDef 参照に統一(該当: GameScene/Hud/EnemySystem/BossBehavior/Centipede)
-  - ボス撃破・ラン終了時に GameScene.boss = null を明示リセット
-  - PauseScene の冗長な scene.stop() と InputSystem の到達不能な isChoosing ガードを整理
-  - AbilitySystem.emitTrail の距離補間を src/core の純関数に切り出し、境界条件(spacing ちょうど倍数・1フレーム複数個)の Vitest を追加。トレイルプールを 16→24 に増強
-  - enemyAiUtils.moveToward の単体テスト追加(tests/ から import 可能な形に。Phaser 型依存を外す)
-  - autopilot の閾値(80/120/4)をファイル冒頭の定数に
-- 制約: verify PASS、挙動不変(スモーク数値同水準)
-
-### C2 | TODO | 整合バッチ: UI微調整とドキュメント同期
+### C2 | DOING | 整合バッチ: UI微調整とドキュメント同期
 - 受け入れ:
   - ボス名テキストとタイマー表示の重なり解消(余白調整)
   - ポーズ中は BGM を減衰(bgmGain を下げ、再開で戻す)
@@ -63,6 +52,11 @@
 
 ### Q1 | DONE | ボスAIの分離リファクタ
 コミット cca91b9。verify PASS。EnemySystem 379→217行。Reviewer APPROVE(移動前後の全文突き合わせで挙動不変を確認)
+
+### C1 | DONE | 品質バッチ: レビュー指摘のコード改善
+コミット 1d8322f。verify PASS(テスト47→60件)。Reviewer APPROVE(ID統一・trail純関数の等価性・型緩和の不変性を検証)。
+挙動変更なし。付随対応: スモークの固定待ちフレークを verify.mjs のポーリング待ちに変更(コーディネーター、2連続PASS確認)、
+reviewer 定義に作業ツリー変更禁止を明記
 
 ### T1 | DONE | 能力使用ボットでの再計測
 コミット ef43af6。verify PASS。可奈美+37%/舞衣+68%の生存伸長を確認、データ調整不要と結論。Reviewer APPROVE。
