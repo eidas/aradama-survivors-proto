@@ -8,15 +8,7 @@
 
 ## SHOULD
 
-### M1 | DOING | メタ進行: データ+純ロジック+セーブ拡張
-docs/07_meta_progression.md §2〜3 に従う。
-- 受け入れ:
-  - src/data/meta.ts: 鍛錬5系統(効果値・段階5・cost(n)=50×n)と持ち帰り式(XP合計×10%+勝利100、撃破0なら0)の定数
-  - src/core/meta.ts: 購入可否/購入/全リセット(返金100%)/持ち帰り計算/効果合成の純関数+Vitest
-  - save.ts: noro / training フィールド追加(欠損時 0 補完、既存テスト更新)
-  - verify PASS
-
-### M2 | TODO | メタ進行: 鍛錬UI(TrainingScene)
+### M2 | DOING | メタ進行: 鍛錬UI(TrainingScene)
 docs/07 §4 に従う。M1 完了後に着手。
 - 受け入れ: タイトルから遷移(Tキー/クリック)/ 5系統の表示・購入・リセット(確認つき)・ESCで戻る / 所持ノロ常時表示 / 日本語折り返しは useAdvancedWrap / verify PASS
 
@@ -36,6 +28,7 @@ docs/07 §2.3・§6 に従う。M1 完了後に着手。
 ## 改善メモ(レビューの non-blocking 提案。まとまったら分割してタスク化)
 
 - 特異体の見た目: setTintFill(全身紫)は視認性優先の暫定。将来「黒い体+紫コアのみ発光」の専用テクスチャかパーティクルに置き換え検討(E1レビューより)
+- meta.ts: stage の負値/超過クランプと未知 TrainingId の明示テスト(M1レビューより)
 
 ## DONE
 
@@ -75,6 +68,9 @@ reviewer 定義に作業ツリー変更禁止を明記
 
 ### E1 | DONE | 荒魂特異体(エリート敵)
 コミット cd098b0。verify PASS(テスト60→64件)。Reviewer APPROVE(全spawn経路のリセット・排他ドロップ・ボス吸収成長との非干渉を確認)
+
+### M1 | DONE | メタ進行: データ+純ロジック+セーブ拡張
+コミット d12ab3c。verify PASS。Reviewer APPROVE(docs/07 との数値一致・不変性・返金額・後方互換を確認)
 
 ---
 Gate 4 記録(3タスク時点): verify 約30秒(<5分 ✓)/ テスト 43→47件(増加 ✓)/ 直近6コミットに revert なし ✓
