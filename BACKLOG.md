@@ -8,11 +8,7 @@
 
 ## SHOULD
 
-### M2 | DOING | メタ進行: 鍛錬UI(TrainingScene)
-docs/07 §4 に従う。M1 完了後に着手。
-- 受け入れ: タイトルから遷移(Tキー/クリック)/ 5系統の表示・購入・リセット(確認つき)・ESCで戻る / 所持ノロ常時表示 / 日本語折り返しは useAdvancedWrap / verify PASS
-
-### M3 | TODO | メタ進行: ラン組み込み
+### M3 | DOING | メタ進行: ラン組み込み
 docs/07 §2.3・§6 に従う。M1 完了後に着手。
 - 受け入れ: 取得XP累計の記録 / endRun で持ち帰り加算・保存 / リザルトに「持ち帰りノロ +N(累計M)」表示 / 鍛錬効果をラン開始時に Player の実効値へ合成(RunMods と別枠、ラン内強化と乗算) / balance-sim は鍛錬0段階で走る規約を docs/05 に追記 / verify PASS
 
@@ -29,6 +25,7 @@ docs/07 §2.3・§6 に従う。M1 完了後に着手。
 
 - 特異体の見た目: setTintFill(全身紫)は視認性優先の暫定。将来「黒い体+紫コアのみ発光」の専用テクスチャかパーティクルに置き換え検討(E1レビューより)
 - meta.ts: stage の負値/超過クランプと未知 TrainingId の明示テスト(M1レビューより)
+- 鍛錬UI: クリック購入時に resetArmed をキャンセル、残高不足時の拒否フィードバック、ROW_KEYS の動的マッピング(M2レビューより)
 
 ## DONE
 
@@ -71,6 +68,10 @@ reviewer 定義に作業ツリー変更禁止を明記
 
 ### M1 | DONE | メタ進行: データ+純ロジック+セーブ拡張
 コミット d12ab3c。verify PASS。Reviewer APPROVE(docs/07 との数値一致・不変性・返金額・後方互換を確認)
+
+### M2 | DONE | メタ進行: 鍛錬UI(TrainingScene)
+コミット b150c69。verify PASS、実機で購入→リセット返金の一巡確認。Reviewer APPROVE。
+※Coderセッション上限中断→コーディネーター完遂(例外運用2回目)
 
 ---
 Gate 4 記録(3タスク時点): verify 約30秒(<5分 ✓)/ テスト 43→47件(増加 ✓)/ 直近6コミットに revert なし ✓
