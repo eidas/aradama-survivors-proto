@@ -23,6 +23,15 @@ export class TitleScene extends Phaser.Scene {
       .text(cx, GAME_HEIGHT * 0.66, 'SPACE / クリック で出撃', { fontSize: '24px', color: '#ffffff' })
       .setOrigin(0.5);
     this.tweens.add({ targets: prompt, alpha: 0.3, duration: 700, yoyo: true, repeat: -1 });
+    const training = this.add
+      .text(cx, GAME_HEIGHT * 0.75, 'T: 鍛錬', { fontSize: '18px', color: '#9adcff' })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    training.on('pointerdown', (_p: Phaser.Input.Pointer, _lx: number, _ly: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation(); // 出撃クリックと排他: 鍛錬ボタン自体のクリックは出撃扱いにしない
+      this.scene.start('Training');
+    });
+    this.input.keyboard!.once('keydown-T', () => this.scene.start('Training'));
     this.add
       .text(
         cx,
