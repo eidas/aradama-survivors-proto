@@ -88,3 +88,15 @@ export function pickEnemyId(runTime: number, rand: number): string {
   }
   return phase.mix[phase.mix.length - 1].enemyId;
 }
+
+/** 特異体の抽選対象から除外する敵種(百足・ボスは対象外。現行 mix には含まれないが防御的措置) */
+const ELITE_EXCLUDED_IDS = new Set(['centipedeHead', 'centipedeSeg', 'amalgam']);
+
+/**
+ * 荒魂特異体(エリート敵)用の敵種抽選(E1)。pickEnemyId をそのまま再利用しつつ、
+ * 百足・ボス系が万一 mix に混入していても 'insect' にフォールバックする。
+ */
+export function pickEliteEnemyId(runTime: number, rand: number): string {
+  const id = pickEnemyId(runTime, rand);
+  return ELITE_EXCLUDED_IDS.has(id) ? 'insect' : id;
+}

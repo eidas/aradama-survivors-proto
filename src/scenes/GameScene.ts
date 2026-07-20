@@ -12,6 +12,7 @@ import { CHARACTERS, MAMORI_UTSUSHI_HEAL, type CharacterId } from '../data/chara
 import { UPGRADES, type UpgradeDef } from '../data/upgrades';
 import {
   BOSS_TIMEOUT,
+  ELITE_GEM_DROP,
   ENEMY_POOL_LIMIT,
   ENEMY_POOL_PREALLOC,
   GEM_POOL_LIMIT,
@@ -341,7 +342,9 @@ export class GameScene extends Phaser.Scene {
   killEnemy(enemy: Enemy): void {
     this.kills++;
     this.killsByType[enemy.def.id] = (this.killsByType[enemy.def.id] ?? 0) + 1;
-    for (const drop of enemy.def.gemDrop) {
+    // 特異体は通常ドロップの代わりに大ジェム ×2(E1)。gemDrop データ自体は書き換えない
+    const gemDrop = enemy.isElite ? ELITE_GEM_DROP : enemy.def.gemDrop;
+    for (const drop of gemDrop) {
       for (let i = 0; i < drop.count; i++) {
         const gem = this.gems.acquire();
         if (gem) {
