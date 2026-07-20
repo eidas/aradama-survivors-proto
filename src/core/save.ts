@@ -1,5 +1,7 @@
 /** localStorage セーブ(docs/04 §11)。スキーマ変更時はキーの v を上げて読み捨てる */
 
+import { TRAINING_IDS, TrainingId } from '../data/meta';
+
 const KEY = 'aradama-survivors/v1';
 
 export interface BestRecord {
@@ -16,9 +18,24 @@ export interface SaveData {
     /** 敵ヒット時のダメージ数字ポップ表示(docs/03 §8: 情報量が多いため既定 OFF) */
     damageNumbers: boolean;
   };
+  /** 所持ノロ(docs/07 §3: メタ進行の恒久通貨) */
+  noro: number;
+  /** 系統ID → 取得段階(0..5) */
+  training: Record<TrainingId, number>;
 }
 
-const DEFAULTS: SaveData = { best: null, settings: { muted: false, damageNumbers: false } };
+function defaultTraining(): Record<TrainingId, number> {
+  const training = {} as Record<TrainingId, number>;
+  for (const id of TRAINING_IDS) training[id] = 0;
+  return training;
+}
+
+const DEFAULTS: SaveData = {
+  best: null,
+  settings: { muted: false, damageNumbers: false },
+  noro: 0,
+  training: defaultTraining(),
+};
 
 /** 新しいランがベスト記録を上回るか。勝利 > 生存時間 の優先順で比較する */
 export function isBetterRun(candidate: BestRecord, best: BestRecord | null): boolean {
@@ -36,6 +53,8 @@ export function loadSave(): SaveData {
       return {
         best: parsed.best ?? null,
         settings: { ...DEFAULTS.settings, ...parsed.settings },
+        noro: parsed.noro ?? 0,
+        training: { ...defaultTraining(), ...parsed.training },
       };
     }
   } catch {

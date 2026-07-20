@@ -22,6 +22,17 @@ describe('isBetterRun(ベスト記録の更新判定)', () => {
 
 describe('loadSave', () => {
   it('localStorage がない環境(Node)でも初期値で動く', () => {
-    expect(loadSave()).toEqual({ best: null, settings: { muted: false, damageNumbers: false } });
+    expect(loadSave()).toEqual({
+      best: null,
+      settings: { muted: false, damageNumbers: false },
+      noro: 0,
+      training: {
+        zangeki: 0,
+        tairyoku: 0,
+        ashisabaki: 0,
+        utsushiRendo: 0,
+        kaishuu: 0,
+      },
+    });
   });
 });
