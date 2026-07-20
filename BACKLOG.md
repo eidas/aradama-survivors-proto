@@ -8,7 +8,26 @@
 
 ## SHOULD
 
-(TODO なし — MUST/SHOULD 全消化。LATER の分割・改善メモのタスク化は人間の指示待ち)
+### C1 | DOING | 品質バッチ: レビュー指摘のコード改善
+蓄積した non-blocking 指摘のうちコード系をまとめて解消する。**挙動変更なし(リファクタ+防御+テスト)**。
+- 受け入れ:
+  - 敵IDリテラル比較('amalgam' 等)を定数または EnemyDef 参照に統一(該当: GameScene/Hud/EnemySystem/BossBehavior/Centipede)
+  - ボス撃破・ラン終了時に GameScene.boss = null を明示リセット
+  - PauseScene の冗長な scene.stop() と InputSystem の到達不能な isChoosing ガードを整理
+  - AbilitySystem.emitTrail の距離補間を src/core の純関数に切り出し、境界条件(spacing ちょうど倍数・1フレーム複数個)の Vitest を追加。トレイルプールを 16→24 に増強
+  - enemyAiUtils.moveToward の単体テスト追加(tests/ から import 可能な形に。Phaser 型依存を外す)
+  - autopilot の閾値(80/120/4)をファイル冒頭の定数に
+- 制約: verify PASS、挙動不変(スモーク数値同水準)
+
+### C2 | TODO | 整合バッチ: UI微調整とドキュメント同期
+- 受け入れ:
+  - ボス名テキストとタイマー表示の重なり解消(余白調整)
+  - ポーズ中は BGM を減衰(bgmGain を下げ、再開で戻す)
+  - ダメージ数字 OFF 切替時に表示中ポップを即時消去
+  - docs/03 §7 に「敵タイプ別撃破内訳」を追記、docs/04 §5 プール表を実装(ダメージ数字=遅延確保200、トレイル24、ディゾルブ40)に同期、docs/05 に balance-sim の前提(Chromium パス)を注記
+- 制約: verify PASS
+
+(見送り: リザルトのレイアウトヘルパー化 — 現状2ブロックのみで抽象化の価値が薄いため YAGNI として不採用)
 
 ## LATER(着手前にコーディネーターが分割・具体化する)
 
@@ -19,16 +38,7 @@
 
 ## 改善メモ(レビューの non-blocking 提案。まとまったら分割してタスク化)
 
-- ボス名テキストとタイマー表示の余白調整(B2レビューより)
-- `'amalgam'` 等の敵IDリテラル比較を定数参照へ(B2レビューより)
-- ボス撃破時に `GameScene.boss = null` の明示リセット(B2レビューより)
-- ポーズ中の BGM 減衰またはミュート(A2レビューより)
-- PauseScene の restart/toTitle の冗長な scene.stop() 整理、InputSystem の到達不能な isChoosing ガード整理(A2レビューより)
-- docs/03 §7 リザルト仕様に「敵タイプ別内訳」を追記(A1レビューより)
-- リザルトの左右ブロック配置のレイアウトヘルパー化(A1レビューより)
-- 迅移トレイルのプール16は Lv3+健脚ビルドでギリギリ。emitTrail の距離補間を src/core に切り出してテスト化も検討(B1レビューより)
-- ダメージ数字 OFF 切替時に表示中ポップを即時消去する厳密化、docs/04 §5 プール表の記載を実装(遅延確保200)に合わせる(A3レビューより)
-- enemyAiUtils.moveToward の単体テスト追加(Q1レビューより)
+(11件を C1/C2 にタスク化済み。レイアウトヘルパー化のみ YAGNI で不採用)
 
 ## DONE
 
