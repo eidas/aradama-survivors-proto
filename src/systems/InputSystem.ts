@@ -4,6 +4,11 @@ import { DEBUG } from '../config';
 import { audio } from '../core/audio';
 import { updateSettings } from '../core/save';
 
+/** 自動操縦ボット(updateAutopilot)の閾値。密集判定距離(px)・鍔迫り警戒距離(px)・迅移発動に必要な密集数 */
+const AUTOPILOT_CLOSE_RANGE = 80;
+const AUTOPILOT_TELEGRAPH_RANGE = 120;
+const AUTOPILOT_DASH_CLUSTER_COUNT = 4;
+
 /**
  * キーボード入力を正規化して player.moveX/Y に書く。
  * 能力キー: Shift=迅移 / E か右クリック=金剛身(長押し) / Space=八幡力(長押し溜め)。
@@ -95,8 +100,9 @@ export class InputSystem {
       const settings = updateSettings({ damageNumbers: !this.game.damageNumbersEnabled });
       this.game.setDamageNumbersEnabled(settings.damageNumbers);
     }
-    // レベルアップ3択の表示中は Game が pause され update 自体が呼ばれないため二重起動しない
-    if (!this.game.isChoosing && Phaser.Input.Keyboard.JustDown(k.pause)) {
+    // レベルアップ3択の表示中は Game が pause され update 自体が呼ばれないため、
+    // isChoosing の追加チェックは到達不能(GameScene.openPause 側の choosing ガードで十分)
+    if (Phaser.Input.Keyboard.JustDown(k.pause)) {
       this.game.openPause();
       return;
     }
@@ -152,13 +158,13 @@ export class InputSystem {
         nearestD = d;
         nearest = e;
       }
-      if (d <= 80) closeCount++;
-      if (e.telegraphing && d <= 120) telegraphNearby = true;
+      if (d <= AUTOPILOT_CLOSE_RANGE) closeCount++;
+      if (e.telegraphing && d <= AUTOPILOT_TELEGRAPH_RANGE) telegraphNearby = true;
     }
 
     let fx = 0;
     let fy = 0;
-    if (nearestD < 70 || closeCount >= 4) {
+    if (nearestD < 70 || closeCount >= AUTOPILOT_DASH_CLUSTER_COUNT) {
       // 近すぎ、または密集(迅移離脱条件): 近傍 150px の敵から加重で離脱
       for (const e of g.enemies.active) {
         const dx = p.x - e.x;
@@ -193,7 +199,7 @@ export class InputSystem {
     // 能力トリガー(AbilitySystem.update は本フレームの後段で呼ばれるため、
     // ここで立てた入力エミュレーションは同フレーム内で消費される)
     // 迅移: 近傍80px以内の敵が4体以上 → 上で決めた離脱方向へ発動
-    this.botWantsDash = abil.jinIState === 'ready' && closeCount >= 4;
+    this.botWantsDash = abil.jinIState === 'ready' && closeCount >= AUTOPILOT_DASH_CLUSTER_COUNT;
     // 金剛身: 予備動作中の敵が120px以内 → 発動し、居続ける限り保持
     this.botWantsGuard = telegraphNearby;
   }

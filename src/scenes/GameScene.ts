@@ -47,7 +47,7 @@ interface JinITrailVfx {
 
 /** 迅移の残像トレイルの生存時間(秒)・同時表示上限(docs/03 §8) */
 const JINI_TRAIL_LIFETIME = 0.25;
-const JINI_TRAIL_LIMIT = 16;
+const JINI_TRAIL_LIMIT = 24;
 const JINI_TRAIL_ALPHA = 0.5;
 
 interface DamageNumberVfx {
@@ -74,10 +74,6 @@ export class GameScene extends Phaser.Scene {
   /** 未消化のレベルアップ 3 択の数 */
   private pendingChoices = 0;
   private choosing = false;
-  /** レベルアップ3択の表示中か(PauseScene 起動判定用に公開) */
-  get isChoosing(): boolean {
-    return this.choosing;
-  }
 
   player!: Player;
   centipede: CentipedeController | null = null;
@@ -248,7 +244,7 @@ export class GameScene extends Phaser.Scene {
     const boss = this.enemies.acquire();
     if (!boss) {
       // プール満杯なら最古の蟲型を 1 体消して確保する
-      const victim = this.enemies.active.find((e) => e.def.id === 'insect');
+      const victim = this.enemies.active.find((e) => e.def.id === ENEMIES.insect.id);
       if (victim) {
         victim.despawn();
         this.enemies.release(victim);
@@ -362,8 +358,8 @@ export class GameScene extends Phaser.Scene {
     }
     this.showDissolve(enemy);
     audio.kill();
-    const wasHead = enemy.def.id === 'centipedeHead';
-    const wasBoss = enemy.def.id === 'amalgam';
+    const wasHead = enemy.def.id === ENEMIES.centipedeHead.id;
+    const wasBoss = enemy.def.id === ENEMIES.amalgam.id;
     enemy.despawn();
     this.enemies.release(enemy);
     if (wasHead) this.centipede?.onHeadKilled(this); // 頭の撃破で残りの節も崩れる
@@ -486,6 +482,7 @@ export class GameScene extends Phaser.Scene {
   endRun(victory: boolean): void {
     if (this.ended) return;
     this.ended = true;
+    this.boss = null; // ボス撃破・ラン終了時は明示的に参照を切る(HUD の世代照合は保険として残す)
     const record = { victory, timeSec: this.runTime, kills: this.kills, level: this.level };
     const bestUpdated = recordRun(record);
     audio.jingle(victory);

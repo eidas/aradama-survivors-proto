@@ -3,6 +3,7 @@ import type { GameScene } from '../scenes/GameScene';
 import { xpForNext } from '../core/xp';
 import { DEBUG } from '../config';
 import { GAME_WIDTH, GAME_HEIGHT } from '../config';
+import { ENEMIES } from '../data/enemies';
 
 const BAR_H = 14;
 
@@ -108,7 +109,10 @@ export class Hud {
     // ボス HP バー: 出現中(プール再利用による世代ズレを除外)のみ表示・追従
     const boss = g.boss;
     const bossAlive =
-      !!boss && boss.active && boss.generation === g.bossGeneration && boss.def.id === 'amalgam';
+      !!boss &&
+      boss.active &&
+      boss.generation === g.bossGeneration &&
+      boss.def.id === ENEMIES.amalgam.id;
     this.bossNameText.setVisible(bossAlive);
     this.bossBg.setVisible(bossAlive);
     this.bossFill.setVisible(bossAlive);

@@ -61,17 +61,18 @@ export class PauseScene extends Phaser.Scene {
   }
 
   private resume(): void {
+    // resume() は自シーンを止めないため、明示的に stop() が必要
     this.scene.stop();
     this.scene.resume('Game');
   }
 
   private restart(): void {
-    this.scene.stop();
+    // start() は呼び出し元シーン(Pause自身)を暗黙に stop するため、明示的な stop() は不要
     this.scene.start('Game');
   }
 
   private toTitle(): void {
-    this.scene.stop();
+    // Game は launch 元で pause 中(stop されていない)なので明示的に stop する
     this.scene.stop('Game');
     this.scene.start('Title');
   }
