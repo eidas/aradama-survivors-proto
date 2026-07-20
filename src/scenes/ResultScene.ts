@@ -12,6 +12,10 @@ export interface RunResult {
   build: string[];
   killBreakdown: KillBreakdownEntry[];
   bestUpdated: boolean;
+  /** 持ち帰りノロ(docs/07 §2.1) */
+  noroEarned: number;
+  /** 加算後の所持ノロ累計 */
+  noroTotal: number;
 }
 
 const fmt = (sec: number) =>
@@ -92,6 +96,14 @@ export class ResultScene extends Phaser.Scene {
         })
         .setOrigin(0.5, 0);
     }
+
+    // 持ち帰りノロ(docs/07 §2.1, §2.3)。最終ビルドの下・操作案内の上に配置し重なりを避ける
+    this.add
+      .text(cx, GAME_HEIGHT * 0.78, `持ち帰りノロ +${data.noroEarned}(累計 ${data.noroTotal})`, {
+        fontSize: '18px',
+        color: '#7ee8c8',
+      })
+      .setOrigin(0.5);
 
     this.add
       .text(cx, GAME_HEIGHT * 0.88, 'R: もう一度   T: タイトルへ', { fontSize: '20px', color: '#ffffff' })

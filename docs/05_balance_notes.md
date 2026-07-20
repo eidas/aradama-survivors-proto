@@ -12,6 +12,7 @@
   - 迅移・金剛身・八幡力は**使わない**。レベルアップは常にカード1(ほぼランダム)
 - 計測スクリプト: リポジトリ外(セッションのスクラッチパッド)。`window.__game`(DEV のみ公開)から 60 秒ごとにサンプリング
 - 前提: `scripts/balance-sim.mjs`(T1 以降)は Playwright の Chromium 実行体が必要。既定パスは `/opt/pw-browsers/chromium`、`CHROMIUM_PATH` 環境変数で上書き可。見つからない場合はエラー終了する
+- balance-sim は鍛錬0段階のセーブ(localStorage 未使用 or `training` 全0)で実行する。鍛錬による乗算修飾(docs/07 §2.3)が計測結果に混入するのを防ぐため(docs/07 §6)
 
 ### 4倍速シミュレーションの既知の歪み
 
