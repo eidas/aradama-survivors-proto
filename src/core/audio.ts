@@ -14,7 +14,11 @@ class AudioEngine {
   private bgmNextTime = 0;
   private bgmStep = 0;
   private lastPlay: Record<string, number> = {};
+  private bgmDucked = false;
   muted = false;
+
+  private static readonly BGM_GAIN = 0.16;
+  private static readonly BGM_GAIN_DUCKED = 0.16 * 0.25;
 
   /** 最初のユーザー操作(クリック/キー)から呼ぶ。多重呼び出し可 */
   init(): void {
@@ -32,7 +36,7 @@ class AudioEngine {
     this.seGain.gain.value = 0.5;
     this.seGain.connect(this.master);
     this.bgmGain = this.ctx.createGain();
-    this.bgmGain.gain.value = 0.16;
+    this.bgmGain.gain.value = this.bgmDucked ? AudioEngine.BGM_GAIN_DUCKED : AudioEngine.BGM_GAIN;
     this.bgmGain.connect(this.master);
 
     // ホワイトノイズバッファ(斬撃・ヒット・ハイハット用)
@@ -45,6 +49,14 @@ class AudioEngine {
   setMuted(muted: boolean): void {
     this.muted = muted;
     if (this.ctx) this.master.gain.value = muted ? 0 : 1;
+  }
+
+  /** ポーズ中の BGM 減衰。true で下げ、false で通常音量へ戻す(PauseScene の開閉から呼ぶ) */
+  duckBgm(duck: boolean): void {
+    this.bgmDucked = duck;
+    if (!this.ctx || !this.bgmGain) return;
+    const target = duck ? AudioEngine.BGM_GAIN_DUCKED : AudioEngine.BGM_GAIN;
+    this.bgmGain.gain.setTargetAtTime(target, this.ctx.currentTime, 0.05);
   }
 
   /** type ごとの連打抑制(密集撃破時の音割れ防止) */

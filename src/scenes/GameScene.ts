@@ -413,10 +413,17 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  /** N キーのトグルから呼ばれる。OFF→ON の初回のみプールを確保する */
+  /** N キーのトグルから呼ばれる。OFF→ON の初回のみプールを確保する。ON→OFF では表示中のポップを即時消去する */
   setDamageNumbersEnabled(enabled: boolean): void {
     this.damageNumbersEnabled = enabled;
-    if (enabled) this.ensureDamageNumberPool();
+    if (enabled) {
+      this.ensureDamageNumberPool();
+    } else {
+      for (const v of this.damageNumbers) {
+        v.life = 0;
+        v.text.setVisible(false);
+      }
+    }
   }
 
   /** ダメージ数字プールの遅延確保(既定 OFF のランでは一度も呼ばれず追加コストゼロ) */

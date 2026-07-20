@@ -45,12 +45,13 @@ export class Hud {
     );
 
     // ボス HP バー(出現中のみ表示。生成済みを setVisible で切り替える)
+    // タイマー表示(y=30、フォント22px)の下端と重ならないよう、名前は y=62 から確保する
     const bossW = this.bossBarWidth;
     const bossX = GAME_WIDTH / 2 - bossW / 2;
-    const bossY = 52;
+    const bossY = 86;
     this.bossNameText = fix(
       add
-        .text(GAME_WIDTH / 2, bossY - 20, '大型荒魂', { fontSize: '16px', color: '#ff6060' })
+        .text(GAME_WIDTH / 2, 62, '大型荒魂', { fontSize: '16px', color: '#ff6060' })
         .setOrigin(0.5, 0)
         .setVisible(false),
     );
