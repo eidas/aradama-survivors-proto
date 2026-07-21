@@ -1,12 +1,15 @@
 import type { GameScene } from '../scenes/GameScene';
 import { ENEMIES } from '../data/enemies';
-import { spawnRatePerSec, pickEnemyId, WAVE_EVENTS } from '../data/waves';
+import { spawnRatePerSec, pickEnemyId, pickEliteEnemyId, WAVE_EVENTS } from '../data/waves';
 import { timeScale } from '../core/combat';
+import { ELITE_START_TIME, ELITE_SPAWN_INTERVAL } from '../data/balance';
 
 /** ウェーブテーブルに従う敵湧きと、時刻指定イベント(群れ突進・大包囲)の発火 */
 export class SpawnSystem {
   private acc = 0;
   private nextEventIdx = 0;
+  /** 荒魂特異体(エリート敵): 次回出現時刻(秒)。E1 */
+  private nextEliteAt = ELITE_START_TIME;
 
   constructor(private game: GameScene) {}
 
@@ -24,6 +27,11 @@ export class SpawnSystem {
     while (this.nextEventIdx < WAVE_EVENTS.length && g.runTime >= WAVE_EVENTS[this.nextEventIdx].at) {
       this.fireEvent(WAVE_EVENTS[this.nextEventIdx].type);
       this.nextEventIdx++;
+    }
+
+    while (g.runTime >= this.nextEliteAt) {
+      this.spawnElite();
+      this.nextEliteAt += ELITE_SPAWN_INTERVAL;
     }
   }
 
@@ -72,28 +80,38 @@ export class SpawnSystem {
     const enemy = g.enemies.acquire();
     if (!enemy) return; // プール上限。単純に湧きをスキップ
 
+    const { x, y } = this.edgePosition();
+    enemy.spawn(def, x, y, timeScale(g.runTime));
+  }
+
+  /** 3:00 以降 45 秒ごとに 1 体(E1)。現ウェーブ mix からの抽選種の特異体として湧く */
+  private spawnElite(): void {
+    const g = this.game;
+    const def = ENEMIES[pickEliteEnemyId(g.runTime, g.rng.next())];
+    const enemy = g.enemies.acquire();
+    if (!enemy) return; // プール上限。単純に湧きをスキップ
+
+    const { x, y } = this.edgePosition();
+    enemy.spawn(def, x, y, timeScale(g.runTime), true);
+  }
+
+  /** 画面外周の帯からランダムな湧き座標を一様に選ぶ(周長比で辺を抽選) */
+  private edgePosition(): { x: number; y: number } {
+    const g = this.game;
     const cam = g.cameras.main;
     const margin = g.rng.range(80, 160);
     const w = cam.worldView.width + margin * 2;
     const h = cam.worldView.height + margin * 2;
-    // 外周の帯から一様に選ぶ(周長比で辺を抽選)
     const edge = g.rng.next() * (w * 2 + h * 2);
-    let x: number;
-    let y: number;
     if (edge < w) {
-      x = cam.worldView.x - margin + edge;
-      y = cam.worldView.y - margin;
+      return { x: cam.worldView.x - margin + edge, y: cam.worldView.y - margin };
     } else if (edge < w * 2) {
-      x = cam.worldView.x - margin + (edge - w);
-      y = cam.worldView.bottom + margin;
+      return { x: cam.worldView.x - margin + (edge - w), y: cam.worldView.bottom + margin };
     } else if (edge < w * 2 + h) {
-      x = cam.worldView.x - margin;
-      y = cam.worldView.y - margin + (edge - w * 2);
+      return { x: cam.worldView.x - margin, y: cam.worldView.y - margin + (edge - w * 2) };
     } else {
-      x = cam.worldView.right + margin;
-      y = cam.worldView.y - margin + (edge - w * 2 - h);
+      return { x: cam.worldView.right + margin, y: cam.worldView.y - margin + (edge - w * 2 - h) };
     }
-    enemy.spawn(def, x, y, timeScale(g.runTime));
   }
 
   /** デバッグ: 周囲リングに n 体即湧き(性能ストレステスト用) */

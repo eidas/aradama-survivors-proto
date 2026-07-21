@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../config';
+import { audio } from '../core/audio';
 
 const OPTIONS: { label: string; color: number }[] = [
   { label: '再開', color: 0x4a90d9 },
@@ -14,6 +15,11 @@ export class PauseScene extends Phaser.Scene {
   }
 
   create(): void {
+    // ポーズ中は BGM を減衰。終了経路(再開/リスタート/タイトルへ)を問わず
+    // 自シーンの shutdown で確実に戻す
+    audio.duckBgm(true);
+    this.events.once('shutdown', () => audio.duckBgm(false));
+
     this.add
       .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.65)
       .setOrigin(0)
@@ -61,17 +67,18 @@ export class PauseScene extends Phaser.Scene {
   }
 
   private resume(): void {
+    // resume() は自シーンを止めないため、明示的に stop() が必要
     this.scene.stop();
     this.scene.resume('Game');
   }
 
   private restart(): void {
-    this.scene.stop();
+    // start() は呼び出し元シーン(Pause自身)を暗黙に stop するため、明示的な stop() は不要
     this.scene.start('Game');
   }
 
   private toTitle(): void {
-    this.scene.stop();
+    // Game は launch 元で pause 中(stop されていない)なので明示的に stop する
     this.scene.stop('Game');
     this.scene.start('Title');
   }

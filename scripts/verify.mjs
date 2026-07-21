@@ -60,26 +60,29 @@ async function smoke() {
       await page.waitForTimeout(1000);
       const fpsBase = await page.evaluate(() => window.__game?.game.loop.actualFps ?? 0);
       await page.keyboard.press('o'); // ストレス: 蟲300体
-      await page.waitForTimeout(4000);
-      // レベルアップ 3 択が開いていたら閉じる(ポーズ解除)
-      for (let i = 0; i < 3; i++) {
-        await page.keyboard.press('1');
-        await page.waitForTimeout(200);
+      // 撃破の発生をポーリング待ち(固定待ちだと環境負荷で撃破数が閾値を割るフレークがあるため)。
+      // 最大 15 秒。レベルアップ 3 択が開いたら閉じながら待つ
+      let state = null;
+      const deadline = Date.now() + 15000;
+      while (Date.now() < deadline) {
+        await page.keyboard.press('1'); // 3 択が開いていれば選択(ポーズ解除)、開いていなければ無害
+        state = await page.evaluate(() => {
+          const g = window.__game;
+          if (!g) return null;
+          return {
+            kills: g.kills,
+            enemies: g.enemies.activeCount,
+            fps: Math.round(g.game.loop.actualFps),
+            running: g.scene.isActive(),
+          };
+        });
+        if (errors.length > 0) return { ok: false, error: `pageerror: ${errors[0]}` };
+        if (state && state.kills >= 10) break;
+        await page.waitForTimeout(500);
       }
-      const state = await page.evaluate(() => {
-        const g = window.__game;
-        if (!g) return null;
-        return {
-          kills: g.kills,
-          enemies: g.enemies.activeCount,
-          fps: Math.round(g.game.loop.actualFps),
-          running: g.scene.isActive(),
-        };
-      });
 
-      if (errors.length > 0) return { ok: false, error: `pageerror: ${errors[0]}` };
       if (!state) return { ok: false, error: 'GameScene に到達できない(__game 未公開)' };
-      if (state.kills < 10) return { ok: false, error: `撃破が発生しない (kills=${state.kills})`, state };
+      if (state.kills < 10) return { ok: false, error: `撃破が発生しない (kills=${state.kills}, 15秒待機後)`, state };
       return { ok: true, fpsBase: Math.round(fpsBase), ...state };
     } finally {
       await browser.close();

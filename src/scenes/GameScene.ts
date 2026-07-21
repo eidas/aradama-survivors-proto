@@ -12,13 +12,15 @@ import { CHARACTERS, MAMORI_UTSUSHI_HEAL, type CharacterId } from '../data/chara
 import { UPGRADES, type UpgradeDef } from '../data/upgrades';
 import {
   BOSS_TIMEOUT,
+  ELITE_GEM_DROP,
   ENEMY_POOL_LIMIT,
   ENEMY_POOL_PREALLOC,
   GEM_POOL_LIMIT,
 } from '../data/balance';
 import { ENEMIES, killsByTypeToBreakdown } from '../data/enemies';
 import { CentipedeController } from '../entities/Centipede';
-import { loadSave, recordRun } from '../core/save';
+import { loadSave, recordRun, storeSave } from '../core/save';
+import { carryOverNoro, trainingEffects } from '../core/meta';
 import { audio } from '../core/audio';
 import { InputSystem } from '../systems/InputSystem';
 import { SpawnSystem } from '../systems/SpawnSystem';
@@ -47,7 +49,7 @@ interface JinITrailVfx {
 
 /** 迅移の残像トレイルの生存時間(秒)・同時表示上限(docs/03 §8) */
 const JINI_TRAIL_LIFETIME = 0.25;
-const JINI_TRAIL_LIMIT = 16;
+const JINI_TRAIL_LIMIT = 24;
 const JINI_TRAIL_ALPHA = 0.5;
 
 interface DamageNumberVfx {
@@ -69,15 +71,13 @@ export class GameScene extends Phaser.Scene {
   killsByType: Record<string, number> = {};
   xp = 0;
   level = 1;
+  /** 消費前の取得XP累計(持ち帰りノロ計算用、docs/07 §2.1)。addXp 一本で経路を漏れなく通す */
+  totalXpEarned = 0;
   /** 強化の取得回数(id → 回数) */
   takes: Record<string, number> = {};
   /** 未消化のレベルアップ 3 択の数 */
   private pendingChoices = 0;
   private choosing = false;
-  /** レベルアップ3択の表示中か(PauseScene 起動判定用に公開) */
-  get isChoosing(): boolean {
-    return this.choosing;
-  }
 
   player!: Player;
   centipede: CentipedeController | null = null;
@@ -127,6 +127,7 @@ export class GameScene extends Phaser.Scene {
     this.killsByType = {};
     this.xp = 0;
     this.level = 1;
+    this.totalXpEarned = 0;
     this.takes = {};
     this.pendingChoices = 0;
     this.choosing = false;
@@ -137,7 +138,8 @@ export class GameScene extends Phaser.Scene {
     this.bossGeneration = -1;
     this.autopilot = false;
     this.fastForward = false;
-    this.damageNumbersEnabled = loadSave().settings.damageNumbers;
+    const save = loadSave();
+    this.damageNumbersEnabled = save.settings.damageNumbers;
     this.damageNumbers = [];
     this.damageNumberCursor = 0;
 
@@ -148,7 +150,9 @@ export class GameScene extends Phaser.Scene {
       .setDepth(0);
 
     const charId = (this.registry.get('characterId') as CharacterId) ?? 'kanami';
-    this.player = new Player(this, CHARACTERS[charId], 0, 0);
+    // 鍛錬(メタ進行)の乗算修飾をラン開始時に一度だけ合成(docs/07 §2.3、RunMods とは別枠)
+    const metaMods = trainingEffects(save.training);
+    this.player = new Player(this, CHARACTERS[charId], 0, 0, metaMods);
     this.enemies = new ObjectPool(() => new Enemy(this), ENEMY_POOL_PREALLOC, ENEMY_POOL_LIMIT);
     this.gems = new ObjectPool(() => new Gem(this), 200, GEM_POOL_LIMIT);
     this.projectiles = new ObjectPool(() => new Projectile(this), 30, 100);
@@ -248,7 +252,7 @@ export class GameScene extends Phaser.Scene {
     const boss = this.enemies.acquire();
     if (!boss) {
       // プール満杯なら最古の蟲型を 1 体消して確保する
-      const victim = this.enemies.active.find((e) => e.def.id === 'insect');
+      const victim = this.enemies.active.find((e) => e.def.id === ENEMIES.insect.id);
       if (victim) {
         victim.despawn();
         this.enemies.release(victim);
@@ -345,7 +349,9 @@ export class GameScene extends Phaser.Scene {
   killEnemy(enemy: Enemy): void {
     this.kills++;
     this.killsByType[enemy.def.id] = (this.killsByType[enemy.def.id] ?? 0) + 1;
-    for (const drop of enemy.def.gemDrop) {
+    // 特異体は通常ドロップの代わりに大ジェム ×2(E1)。gemDrop データ自体は書き換えない
+    const gemDrop = enemy.isElite ? ELITE_GEM_DROP : enemy.def.gemDrop;
+    for (const drop of gemDrop) {
       for (let i = 0; i < drop.count; i++) {
         const gem = this.gems.acquire();
         if (gem) {
@@ -362,8 +368,8 @@ export class GameScene extends Phaser.Scene {
     }
     this.showDissolve(enemy);
     audio.kill();
-    const wasHead = enemy.def.id === 'centipedeHead';
-    const wasBoss = enemy.def.id === 'amalgam';
+    const wasHead = enemy.def.id === ENEMIES.centipedeHead.id;
+    const wasBoss = enemy.def.id === ENEMIES.amalgam.id;
     enemy.despawn();
     this.enemies.release(enemy);
     if (wasHead) this.centipede?.onHeadKilled(this); // 頭の撃破で残りの節も崩れる
@@ -417,10 +423,17 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  /** N キーのトグルから呼ばれる。OFF→ON の初回のみプールを確保する */
+  /** N キーのトグルから呼ばれる。OFF→ON の初回のみプールを確保する。ON→OFF では表示中のポップを即時消去する */
   setDamageNumbersEnabled(enabled: boolean): void {
     this.damageNumbersEnabled = enabled;
-    if (enabled) this.ensureDamageNumberPool();
+    if (enabled) {
+      this.ensureDamageNumberPool();
+    } else {
+      for (const v of this.damageNumbers) {
+        v.life = 0;
+        v.text.setVisible(false);
+      }
+    }
   }
 
   /** ダメージ数字プールの遅延確保(既定 OFF のランでは一度も呼ばれず追加コストゼロ) */
@@ -474,6 +487,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   addXp(value: number): void {
+    this.totalXpEarned += value; // 消費前の値を累計(持ち帰りノロの原資、docs/07 §2.1)
     this.xp += value;
     while (this.xp >= xpForNext(this.level)) {
       this.xp -= xpForNext(this.level);
@@ -486,8 +500,19 @@ export class GameScene extends Phaser.Scene {
   endRun(victory: boolean): void {
     if (this.ended) return;
     this.ended = true;
+    this.boss = null; // ボス撃破・ラン終了時は明示的に参照を切る(HUD の世代照合は保険として残す)
     const record = { victory, timeSec: this.runTime, kills: this.kills, level: this.level };
     const bestUpdated = recordRun(record);
+
+    // 持ち帰りノロ: 鍛錬「回収の心得」の noroGainMul を乗算してから保存(docs/07 §2.1, §2.3)
+    const save = loadSave();
+    const noroGainMul = trainingEffects(save.training).noroGainMul;
+    const noroEarned = Math.floor(
+      carryOverNoro(this.totalXpEarned, victory, this.kills) * noroGainMul,
+    );
+    save.noro += noroEarned;
+    storeSave(save);
+
     audio.jingle(victory);
     // 最終ビルド一覧(取得した強化と回数)
     const build = UPGRADES.filter((u) => (this.takes[u.id] ?? 0) > 0).map(
@@ -500,6 +525,8 @@ export class GameScene extends Phaser.Scene {
       build,
       killBreakdown,
       bestUpdated,
+      noroEarned,
+      noroTotal: save.noro,
     });
   }
 

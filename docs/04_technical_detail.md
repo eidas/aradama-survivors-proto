@@ -160,7 +160,9 @@ export interface UpgradeDef {
 | Enemy | 350 | 400(超過時は最古の画面外小型を消して湧かす) |
 | Gem | 1,000 | 1,000(§6 のマージで維持) |
 | SlashEffect / Projectile | 100 | 200 |
-| ダメージ数字(設定ON時) | 100 | 200 |
+| 撃破ディゾルブ | 40 | 40(常時全確保) |
+| 迅移トレイル | 24 | 24(常時全確保) |
+| ダメージ数字 | 0(設定 ON への切替時に一括確保) | 200 |
 
 - `ObjectPool<T>` は `acquire()/release(obj)` のみの単純実装。エンティティは `active` フラグで管理し、配列の詰め替えをしない(swap-remove)。
 

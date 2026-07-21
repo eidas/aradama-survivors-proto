@@ -26,3 +26,21 @@ export const GEM_MERGE_INTERVAL = 10;
 export const ENEMY_POOL_PREALLOC = 350;
 export const ENEMY_POOL_LIMIT = 400;
 export const GEM_POOL_LIMIT = 1000;
+
+/** 荒魂特異体(エリート敵): 3:00 以降、45 秒ごとに 1 体出現 */
+export const ELITE_START_TIME = 180;
+export const ELITE_SPAWN_INTERVAL = 45;
+
+/** 特異体のステータス倍率(時間スケーリングとは別軸で乗算) */
+export const ELITE_STAT_MULTS = {
+  hp: 5,
+  contactDamage: 1.5,
+  radius: 1.4,
+  speed: 0.9,
+} as const;
+
+/** 特異体の発光 tint(紫系)。tint 優先順位: 被弾フラッシュ(白) > 予備動作(橙) > 特異体(紫) > 通常 */
+export const ELITE_TINT = 0x9b30ff;
+
+/** 特異体の撃破ドロップ: 通常ドロップの代わりに大ジェム ×2 */
+export const ELITE_GEM_DROP: { size: GemSize; count: number }[] = [{ size: 'L', count: 2 }];

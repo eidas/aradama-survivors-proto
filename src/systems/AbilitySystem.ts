@@ -8,6 +8,7 @@ import {
   computeChargeStage,
 } from '../data/abilities';
 import { audio } from '../core/audio';
+import { stepTrailSpacing } from '../core/trail';
 
 type JinIState = 'ready' | 'active' | 'cooldown';
 type KongoushinState = 'ready' | 'guarding' | 'lockout';
@@ -41,6 +42,8 @@ export class AbilitySystem {
   chargeTime = 0;
 
   private queryBuf: Enemy[] = [];
+  /** stepTrailSpacing に渡すコールバック(鉄則2: 毎フレーム生成しないよう 1 回だけ束縛) */
+  private readonly onTrailPoint = (x: number, y: number): void => this.game.showJinITrail(x, y);
 
   constructor(private game: GameScene) {
     this.kongoushinGauge = this.kongoushinLevel.gauge;
@@ -200,19 +203,18 @@ export class AbilitySystem {
   /**
    * 迅移中の残像トレイル(docs/03 §8)。時間ベースだと Lv3(15.625倍速)で間隔がスカスカになるため、
    * 移動線分上を距離ベースで一定間隔ごとにサンプリングして配置する(1フレームで複数個置くことがある)。
+   * 距離補間そのものは src/core/trail.ts の純関数に切り出している。
    */
   private emitTrail(x0: number, y0: number, x1: number, y1: number): void {
-    const segDist = Math.hypot(x1 - x0, y1 - y0);
-    if (segDist <= 0) return;
-    let remainStart = this.trailAccum;
-    let consumed = 0;
-    while (remainStart + (segDist - consumed) >= JINI_TRAIL_SPACING) {
-      consumed += JINI_TRAIL_SPACING - remainStart;
-      const t = consumed / segDist;
-      this.game.showJinITrail(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t);
-      remainStart = 0;
-    }
-    this.trailAccum = remainStart + (segDist - consumed);
+    this.trailAccum = stepTrailSpacing(
+      x0,
+      y0,
+      x1,
+      y1,
+      JINI_TRAIL_SPACING,
+      this.trailAccum,
+      this.onTrailPoint,
+    );
   }
 
   // ── 八幡力 ──

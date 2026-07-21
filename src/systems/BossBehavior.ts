@@ -152,7 +152,7 @@ export class BossBehavior {
 
     for (let i = g.enemies.active.length - 1; i >= 0; i--) {
       const other = g.enemies.active[i];
-      if (other.def.id !== 'insect') continue;
+      if (other.def.id !== ENEMIES.insect.id) continue;
       const dx = e.x - other.x;
       const dy = e.y - other.y;
       const d = Math.hypot(dx, dy);

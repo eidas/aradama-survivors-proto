@@ -52,7 +52,7 @@ export class CentipedeController {
   /** 頭が撃破された: 残りの節も即撃破(隠世との繋がりが断たれる)。GameScene.killEnemy から呼ばれる */
   onHeadKilled(game: GameScene): void {
     for (const p of this.parts) {
-      if (this.isLive(p) && p.e.def.id === 'centipedeSeg') game.killEnemy(p.e);
+      if (this.isLive(p) && p.e.def.id === ENEMIES.centipedeSeg.id) game.killEnemy(p.e);
     }
   }
 
@@ -60,7 +60,7 @@ export class CentipedeController {
     if (!this.alive) return;
     this.parts = this.parts.filter((p) => this.isLive(p));
 
-    if (this.parts.length === 0 || this.parts[0].e.def.id !== 'centipedeHead') {
+    if (this.parts.length === 0 || this.parts[0].e.def.id !== ENEMIES.centipedeHead.id) {
       // 全滅(頭撃破 or 節の削り切り)。強化ピック 1 回ボーナス(docs/03 §5.1)
       this.alive = false;
       if (!this.defeated) {
